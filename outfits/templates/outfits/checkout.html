@@ -1,0 +1,55 @@
+{# outfits/templates/outfits/checkout.html #}
+{% extends 'outfits/base.html' %}
+{% load humanize %}
+
+{% block title %}Checkout - ยืนยันข้อมูลการเช่า{% endblock %}
+
+{% block content %}
+  <h2>Checkout - ยืนยันข้อมูลการเช่า</h2>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+
+    {# ส่วนสรุปรายการสินค้า (อาจจะดึงมาจาก cart_items ใน context) #}
+    <div class="checkout-summary" style="flex: 1; min-width: 250px; border: 1px solid #eee; padding: 15px;">
+      <h3>สรุปรายการเช่า</h3>
+      {% if cart_items %}
+        <ul>
+          {% for item in cart_items %}
+            <li>
+                {{ item.quantity }} x {{ item.outfit.name }}
+                ({{ item.outfit.price|floatformat:2|intcomma }} บาท/วัน)
+            </li>
+          {% endfor %}
+        </ul>
+        {# แสดงยอดรวมคร่าวๆ จากตะกร้า (ยังไม่รวม duration) ถ้าต้องการ #}
+        {# <p><strong>ยอดรวมเบื้องต้น: {{ total_cart_price|floatformat:2|intcomma }} บาท</strong></p> #}
+        <hr>
+      {% else %}
+        <p>ไม่มีสินค้าในตะกร้า</p>
+        <p><a href="{% url 'outfits:outfit-list' %}">กลับไปเลือกชุด</a></p>
+        {# ถ้าไม่มีสินค้า ไม่ควรแสดงฟอร์ม checkout ด้านล่าง #}
+      {% endif %}
+    </div>
+
+    {# ส่วนฟอร์มกรอกข้อมูล #}
+    <div class="checkout-form" style="flex: 2; min-width: 300px;">
+      <h3>ข้อมูลการติดต่อและวันที่เช่า</h3>
+      {% if cart_items %} {# แสดงฟอร์มเฉพาะเมื่อมีของในตะกร้า #}
+        <form method="post">
+          {% csrf_token %}
+
+          {# แสดงฟอร์ม Checkout ที่ส่งมาจาก View #}
+          {{ form.as_p }}
+
+          <p style="margin-top: 20px;">
+            <button type="submit" class="button primary-button">ยืนยันข้อมูลและดำเนินการต่อ</button>
+          </p>
+          <p><small>เมื่อกดปุ่มนี้ ระบบจะสร้างคำสั่งเช่า และนำคุณไปยังหน้าชำระเงิน</small></p>
+
+        </form>
+      {% endif %}
+    </div>
+
+  </div>
+
+{% endblock %}
