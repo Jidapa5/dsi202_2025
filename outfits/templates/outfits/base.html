@@ -1,83 +1,23 @@
 {% load static %}
-{% load humanize %} {# <--- เพิ่มบรรทัดนี้ #}
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MindVibe - ค้นหาและเช่าชุดที่ใช่ สไตล์ที่เป็นคุณ">
-    {# --- เพิ่ม Block Title --- #}
-    <title>{% block title %}MindVibe{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'outfits/styles.css' %}">
-    {% block extra_head %}{% endblock %} {# เพิ่ม block สำหรับ css/js พิเศษของแต่ละหน้า #}
+  <meta charset="utf-8">
+  <title>MindVibe</title>
+  <link rel="stylesheet" href="{% static 'outfits/styles.css' %}">
 </head>
 <body>
-    <header>
-        <div class="header-inner">
-            {# --- อาจจะใส่ Logo แทน H1 --- #}
-            <h1><a href="{% url 'outfits:home' %}" style="text-decoration: none; color: inherit;">MindVibe</a></h1>
-
-            <nav aria-label="Main Navigation">
-                {# --- แก้ไข URL ให้ใช้ namespace --- #}
-                <a href="{% url 'outfits:home' %}">หน้าแรก</a>
-                <a href="{% url 'outfits:outfit-list' %}">ชุดทั้งหมด</a>
-
-            
-                {# {% if all_categories %}
-                    <div class="dropdown">
-                        <a href="#" class="dropdown-toggle">หมวดหมู่</a>
-                        <ul class="dropdown-menu">
-                            {% for category in all_categories %}
-                                <li><a href="{% url 'outfits:outfits-by-category' category.slug %}">{{ category.name }}</a></li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endif %} #}
-
-                {# --- เพิ่ม Link ตะกร้าสินค้า --- #}
-                {# ต้องส่ง cart_item_count มาจาก context processor หรือ view #}
-                <a href="{% url 'outfits:cart_detail' %}">
-                    ตะกร้า
-                    {% if cart_item_count > 0 %}
-                        <span class="cart-badge">{{ cart_item_count }}</span> {# แสดงจำนวนสินค้า #}
-                    {% endif %}
-                </a>
-
-                {# --- เพิ่ม Link สำหรับ Login/Logout/Profile/History --- #}
-                {% if user.is_authenticated %}
-                    <a href="{% url 'outfits:order_history' %}">ประวัติการเช่า</a>
-                     {# อาจจะมี link ไปหน้า profile ถ้าสร้าง #}
-                    <span class="user-greeting">สวัสดี, {{ user.first_name|default:user.username }}</span>
-                    <form action="{% url 'logout' %}" method="post" style="display: inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="button link-button">ออกจากระบบ</button> {# ใช้ class ให้เหมือน link #}
-                    </form>
-                {% else %}
-                    <a href="{% url 'login' %}">เข้าสู่ระบบ</a>
-                    {# <a href="{% url 'register' %}">สมัครสมาชิก</a> #} {# ถ้ามีหน้าสมัครสมาชิก #}
-                {% endif %}
-
-            </nav>
-        </div>
-    </header>
-
-    <div class="container">
-         {# --- แสดง Messages --- #}
-         {% if messages %}
-            <ul class="messages" style="list-style: none; padding: 0; margin: 15px 0;">
-                {% for message in messages %}
-                    <li{% if message.tags %} class="alert alert-{{ message.tags }}"{% endif %} style="padding: 10px; border: 1px solid; margin-bottom: 10px;">{{ message }}</li>
-                {% endfor %}
-            </ul>
-         {% endif %}
-
-        {% block content %}{% endblock %}
-    </div>
-
-    <footer>
-        <p>&copy; {% now "Y" %} MindVibe</p> {# ใช้ tag now แสดงปีปัจจุบัน #}
-    </footer>
-
-    {% block extra_js %}{% endblock %} {# เพิ่ม block สำหรับ js พิเศษของแต่ละหน้า #}
+  <header>
+    <h1>MindVibe</h1>
+    <nav>
+      <a href="{% url 'home' %}">Home</a>
+      <a href="{% url 'outfit-list' %}">Outfits</a>
+    </nav>
+  </header>
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
 </body>
 </html>
+
+

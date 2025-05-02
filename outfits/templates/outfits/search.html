@@ -1,26 +1,14 @@
 {% extends 'outfits/base.html' %}
 {% block content %}
-<section class="search-results-section">
-    <header>
-        <h2>ผลการค้นหา "{{ query }}"</h2>
-    </header>
-    <div class="results-grid">
-        {% for result in results %}
-        <article class="outfit-card">
-            <div class="outfit-image">
-                <img src="{{ result.image.url }}" alt="{{ result.name }}" width="250">
-            </div>
-            <div class="outfit-info">
-                <h3>{{ result.name }}</h3>
-                <p class="description">{{ result.description|truncatechars:100 }}</p>
-                <div class="actions">
-                    <a href="{% url 'outfit-detail' result.pk %}" class="button primary-button">ดูรายละเอียด</a>
-                </div>
-            </div>
-        </article>
-        {% empty %}
-        <p class="no-results">ไม่พบชุดที่ตรงกับคำค้นหา "{{ query }}"</p>
-        {% endfor %}
-    </div>
-</section>
+<h2>ผลการค้นหา "{{ query }}"</h2>
+{% for result in results %}
+<div class="outfit-card">
+  <img src="{{ result.image.url }}" width="250">
+  <h3>{{ result.name }}</h3>
+  <p>{{ result.description }}</p>
+  <a href="{% url 'outfit-detail' result.pk %}">ดูรายละเอียด</a>
+</div>
+{% empty %}
+<p>ไม่พบข้อมูล</p>
+{% endfor %}
 {% endblock %}

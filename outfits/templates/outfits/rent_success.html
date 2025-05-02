@@ -1,0 +1,7 @@
+{% extends 'outfits/base.html' %}
+{% block content %}
+<h2>เช่าชุดสำเร็จ!</h2>
+<p>คุณได้เช่า "{{ outfit.name }}" จำนวน {{ duration }} วัน</p>
+<p>ราคารวม: {{ total_price|floatformat:2 }} บาท</p>
+<a href="{% url 'outfit-list' %}">กลับไปดูรายการชุด</a>
+{% endblock %}
