@@ -10,8 +10,8 @@
   <img src="{{ outfit.image.url }}" width="250">
   <h3>{{ outfit.name }}</h3>
   <p>{{ outfit.description }}</p>
-  <p>ราคา: {{ outfit.price }} บาท</p> <!-- เพิ่มตรงนี้ -->
-  {% if outfit.is_rented %}
+  <p>ราคา: {{ outfit.price }} บาท</p>
+  <p>ขนาด: {{ outfit.size }}</p>  <p>วัสดุ: {{ outfit.material }}</p>  {% if outfit.is_rented %}
     <button disabled>ถูกเช่าแล้ว</button>
   {% else %}
     <a href="{% url 'outfit-detail' outfit.pk %}">ดูรายละเอียด</a>

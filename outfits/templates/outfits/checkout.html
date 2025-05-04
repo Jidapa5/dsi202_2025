@@ -1,0 +1,43 @@
+{% extends 'outfits/base.html' %}
+{% block content %}
+    <h2>Checkout</h2>
+
+    {% if cart %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Outfit</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pk, item in cart.items %}
+                    <tr>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.price }}</td>
+                        <td>{{ item.price|multiply:item.quantity }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p>Total: {{ total_price }}</p>
+
+        <div>
+            <h3>Payment Information</h3>
+            <p>Please transfer the total amount to the following account:</p>
+            <p>Bank Account Number: {{ bank_account_number }}</p>
+            <img src="{{ qr_code_image }}" alt="QR Code">
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ payment_form.as_p }}
+            <button type="submit">Submit Payment Information</button>
+        </form>
+    {% else %}
+        <p>Your cart is empty.</p>
+    {% endif %}
+{% endblock %}

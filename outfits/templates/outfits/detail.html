@@ -4,11 +4,10 @@
 <img src="{{ outfit.image.url }}" width="300">
 <p>{{ outfit.description }}</p>
 <p>ราคาต่อวัน: {{ outfit.price|floatformat:2 }} บาท</p>
-{% if outfit.is_rented %}
+<p>ขนาด: {{ outfit.size }}</p>  <p>วัสดุ: {{ outfit.material }}</p>  {% if outfit.is_rented %}
   <button disabled>ถูกเช่าแล้ว</button>
 {% else %}
-  <form method="post">
-    {% csrf_token %}
+  <form method="post" action="{% url 'rent-outfit' outfit.pk %}">  {% csrf_token %}
     {{ form.as_p }}
     <button type="submit">เช่าชุดนี้</button>
   </form>
