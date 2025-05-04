@@ -11,6 +11,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_strong_password}
     ports:
       - "5433:5432"
+    restart: always
 
   web:
     build: .
@@ -22,11 +23,12 @@ services:
       - "8000:8000"
     environment:
       SECRET_KEY: ${SECRET_KEY:-your_default_django_secret_key}
-      DEBUG: ${DEBUG:-1}
+      DEBUG: ${DEBUG:-0}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
-      DATABASE_URL: ${DATABASE_URL:-postgres://mindvibe_user:set_a_strong_password@db:5432/mindvibe_db}
+      DATABASE_URL: ${DATABASE_URL:-postgres://mindvibe_user:your_strong_password@db:5432/mindvibe_db}
     depends_on:
       - db
+    restart: always
 
 volumes:
   postgres_data:

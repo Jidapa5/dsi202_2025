@@ -1,44 +1,83 @@
-{% extends 'outfits/base.html' %}
-{% load static %} {# เพิ่ม load static ถ้าจะใช้รูป placeholder #}
+{% extends 'outfits/base.html' %} {# ตรวจสอบว่า base template มี {% load humanize %} หรือยัง ถ้ายังไม่มีให้เพิ่ม #}
+{% load humanize %} {# สำหรับ format ราคา #}
 
-{% block title %}{{ outfit.name }} - MindVibe{% endblock %} {# กำหนด Title ของหน้า #}
+{% block title %}{{ outfit.name }}{% endblock %} {# เพิ่ม block title ถ้าต้องการ #}
 
 {% block content %}
-<h2>{{ outfit.name }}</h2>
+<article>
+    <header>
+        <h2>{{ outfit.name }}</h2>
+        {# --- เพิ่มการแสดงหมวดหมู่ --- #}
+        {% if outfit.category %}
+            <p style="font-size: 0.9em; color: grey;">
+                หมวดหมู่: <a href="{% url 'outfits:outfits-by-category' outfit.category.slug %}">{{ outfit.category.name }}</a>
+            </p>
+        {% endif %}
+    </header>
+    <div class="outfit-image">
+        {# --- ตรวจสอบว่ามีรูปภาพหรือไม่ --- #}
+        {% if outfit.image %}
+            <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}" width="300">
+        {% else %}
+            <p>(ไม่มีรูปภาพ)</p>
+        {% endif %}
+    </div>
+    <div class="outfit-details">
+        <p class="description">{{ outfit.description }}</p>
+        {# --- ใช้ humanize format ราคา --- #}
+        <p class="price">ราคาเช่าต่อวัน: <span class="price-value">{{ outfit.price|floatformat:2|intcomma }}</span> บาท</p>
 
-{# เช็คว่ามีรูปภาพไหม ก่อนแสดงผล #}
-{% if outfit.image %}
-    <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}" width="300" style="max-width: 100%; height: auto;">
-{% else %}
-    <img src="{% static 'outfits/placeholder.png' %}" alt="No image available" width="300"> {# รูปสำรอง ถ้าไม่มีรูป #}
-{% endif %}
+        {# --- เปลี่ยนจากฟอร์มเช่า เป็นฟอร์ม "เพิ่มลงตะกร้า" --- #}
+        <div class="add-to-cart-action">
+             {# ตรวจสอบว่าชุด active หรือไม่ (ถ้ามี is_active field ใน Model) #}
+             {% if outfit.is_active %}
+                <form action="{% url 'outfits:add_to_cart' outfit.id %}" method="post">
+                    {% csrf_token %}
+                    {# แสดงฟอร์ม add_to_cart_form ที่ส่งมาจาก View #}
+                    {{ add_to_cart_form.quantity.label_tag }}
+                    {{ add_to_cart_form.quantity }}
+                    {# หรือจะแสดง field อื่นๆ ของ form ถ้ามี #}
+                    {# {{ add_to_cart_form.as_p }} #}
+                    <button type="submit" class="add-cart-button">เพิ่มลงตะกร้า</button>
+                </form>
+             {% else %}
+                 <p style="color: red;">(ชุดนี้ไม่พร้อมให้เช่าในขณะนี้)</p>
+             {% endif %}
+        </div>
+        {# --- ลบส่วน rental-status เก่าออก ---
+        <div class="rental-status">
+            {% if outfit.is_rented %}
+                <button type="button" disabled class="rented-button">ถูกเช่าแล้ว</button>
+            {% else %}
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }} {# form เก่า (RentForm) #}
+                    <button type="submit" class="rent-button">เช่าชุดนี้</button>
+                </form>
+            {% endif %}
+        </div>
+        --- #}
+    </div>
+</article>
 
-<p>{{ outfit.description|linebreaks }}</p> {# ใช้ linebreaks filter เผื่อ description มีหลายบรรทัด #}
-{# ราคา (DecimalField ไม่ต้องใช้ floatformat ก็ได้ แต่ใส่ไว้ก็ได้) #}
-<p>ราคาต่อวัน: {{ outfit.price|floatformat:2 }} บาท</p>
-<p>ขนาด: {{ outfit.size|default:"-" }}</p> {# ใช้ default ถ้าไม่มีค่า #}
-<p>วัสดุ: {{ outfit.material|default:"-" }}</p> {# ใช้ default ถ้าไม่มีค่า #}
-
-{# --- ส่วนเช็คสถานะและแสดงฟอร์ม Add to Cart --- #}
-{% if outfit.is_available %} {# เช็คจาก is_available #}
-  <div class="add-to-cart-form">
-    <h3>Rent this Outfit</h3>
-    {# ฟอร์มนี้จะส่งข้อมูลไปที่ view 'cart_add' #}
-    <form action="{% url 'outfits:cart_add' outfit.id %}" method="post">
-        {% csrf_token %}
-        {# แสดงฟอร์ม AddToCartForm ที่ส่งมาจาก View #}
-        {{ add_to_cart_form.as_p }}
-        <button type="submit" class="button">Add to Cart</button>
-    </form>
-  </div>
-{% else %}
-  {# ถ้า is_available เป็น False #}
-  <button disabled class="button-disabled">Currently Unavailable</button>
-  <p style="color: red; margin-top: 10px;">This outfit is currently rented out or unavailable.</p>
-{% endif %}
-{# --- จบส่วนเช็คสถานะ --- #}
-
-<hr>
-<a href="{% url 'outfits:outfit-list' %}">Back to Outfit List</a>
+{# --- อาจจะเพิ่มส่วนแสดงสินค้าที่เกี่ยวข้อง (ถ้ามี context 'related_outfits') --- #}
+{# {% if related_outfits %}
+    <section class="related-outfits">
+        <h3>ชุดที่เกี่ยวข้อง</h3>
+        <div class="outfit-list">
+            {% for related_outfit in related_outfits %}
+                <div class="outfit-item">
+                    <a href="{% url 'outfits:outfit-detail' related_outfit.pk %}">
+                         {% if related_outfit.image %}
+                             <img src="{{ related_outfit.image.url }}" alt="{{ related_outfit.name }}" height="150">
+                         {% endif %}
+                         <p>{{ related_outfit.name }}</p>
+                         <p>{{ related_outfit.price|floatformat:2|intcomma }} บาท/วัน</p>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+{% endif %} #}
 
 {% endblock %}

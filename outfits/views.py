@@ -1,286 +1,641 @@
+# outfits/views.py
 from django.shortcuts import render, get_object_or_404, redirect
-from django.urls import reverse_lazy, reverse
-from django.views import View, generic
-from django.views.decorators.http import require_POST
-from django.contrib.auth.forms import AuthenticationForm # ใช้ Form มาตรฐาน
-from django.contrib.auth import login, logout, get_user_model
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.views import View
+from django.views.generic import ListView, DetailView # ใช้ Generic Views
+from django.urls import reverse, reverse_lazy
 from django.contrib import messages
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
+from django.db.models import Q # สำหรับ OR query ใน search
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError, JsonResponse, HttpResponseNotFound
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django.utils import timezone
-from django.db import transaction # เพิ่ม import สำหรับ atomic transaction
-from decimal import Decimal # เพิ่ม import
+from datetime import timedelta
+import json
+import omise # Import omise library
 
-from .models import Outfit, Rental
-from .forms import (
-    OutfitForm,
-    UserRegistrationForm,
-    PaymentForm,
-    AddToCartForm, # เพิ่ม
-    UpdateCartForm # เพิ่ม
-)
-from .cart import Cart # Import Cart class (ต้องสร้างไฟล์ cart.py)
+# --- เพิ่ม imports สำหรับ register_view ---
+from django.contrib.auth.forms import UserCreationForm # Import ฟอร์มสมัครสมาชิก
+from django.contrib.auth import login # Import login function
 
-# === Authentication Views ===
+# Import models และ forms
+from .models import Outfit, Category, Order, OrderItem
+from .forms import OutfitForm, CheckoutForm, CartAddItemForm, CartUpdateItemForm
+# from .cart import Cart # ถ้าสร้าง Class จัดการ Cart แยก
 
-def register(request):
-    if request.user.is_authenticated:
-        return redirect('home')
-    if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            # login(request, user) # อาจจะ Login ให้เลย หรือให้ไป Login เอง
-            messages.success(request, f'Account created for {user.username}! Please log in.')
-            return redirect('login')
-        else:
-             messages.error(request, "Please correct the errors below.")
-    else:
-        form = UserRegistrationForm()
-    return render(request, 'outfits/register.html', {'form': form})
+# --- Helper Function (ถ้าต้องการ Class จัดการ Cart) ---
+# def get_cart(request):
+#     # สร้างหรือดึง Cart object จาก session
+#     # ...
 
-# Login และ Logout ใช้ View มาตรฐานของ Django ที่กำหนดใน mindvibe_project/urls.py
+# --- Context Processors (ถ้าสร้าง) ---
+# def categories_processor(request):
+#     return {'all_categories': Category.objects.all()}
+# def cart_processor(request):
+#     cart_session = request.session.get('cart', {})
+#     cart_item_count = sum(item['quantity'] for item in cart_session.values())
+#     return {'cart_item_count': cart_item_count}
 
-# === Outfit Views ===
+# --- Outfit Views ---
 
-class OutfitListView(generic.ListView):
+def home(request):
+    # ดึงข้อมูลชุดแนะนำ (ตัวอย่าง: สุ่ม 6 รายการที่ active)
+    featured_outfits = Outfit.objects.filter(is_active=True).select_related('category').order_by('?')[:6] # เพิ่ม select_related
+
+    # สร้าง Context Dictionary
+    context = {
+        'featured_outfits': featured_outfits
+        # สามารถเพิ่ม context อื่นๆ ที่ต้องการส่งไปหน้า home ได้
+    }
+    # Render template พร้อมส่ง context ไปด้วย
+    return render(request, 'outfits/home.html', context)
+
+
+class OutfitListView(ListView):
     model = Outfit
     template_name = 'outfits/list.html'
     context_object_name = 'outfits'
-    paginate_by = 9 # เพิ่ม Pagination
+    paginate_by = 12 # แสดงผลหน้าละ 12 รายการ
 
     def get_queryset(self):
-        # แสดงเฉพาะชุดที่ is_available = True
-        return Outfit.objects.filter(is_available=True).order_by('-id')
+        # แสดงเฉพาะ active outfits และดึง category มาพร้อมกัน
+        return Outfit.objects.filter(is_active=True).select_related('category')
 
-class OutfitDetailView(generic.DetailView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "รายการชุดทั้งหมด" # เพิ่ม title สำหรับ template
+        return context
+
+
+class OutfitByCategoryListView(ListView):
+    model = Outfit
+    template_name = 'outfits/list.html'
+    context_object_name = 'outfits'
+    paginate_by = 12
+
+    def get_queryset(self):
+        self.category = get_object_or_404(Category, slug=self.kwargs['category_slug'])
+        # กรองตาม category และ is_active และดึง category มาด้วย (ถึงแม้จะรู้ category แล้วก็ตาม)
+        return Outfit.objects.filter(category=self.category, is_active=True).select_related('category')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['category'] = self.category
+        context['title'] = f"หมวดหมู่: {self.category.name}"
+        return context
+
+
+class OutfitDetailView(DetailView):
     model = Outfit
     template_name = 'outfits/detail.html'
     context_object_name = 'outfit'
 
+    def get_queryset(self):
+        # ดึงเฉพาะ active outfit และ category ที่เกี่ยวข้อง
+        return Outfit.objects.filter(is_active=True).select_related('category')
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['add_to_cart_form'] = AddToCartForm() # ส่งฟอร์ม Add to cart ไปด้วย
+        context['add_to_cart_form'] = CartAddItemForm() # เพิ่มฟอร์ม Add to Cart
+        # ตัวอย่าง: แสดงสินค้าที่เกี่ยวข้องในหมวดหมู่เดียวกัน (ไม่เอาตัวมันเอง)
+        if self.object.category:
+             context['related_outfits'] = Outfit.objects.filter(
+                 category=self.object.category, is_active=True
+             ).exclude(pk=self.object.pk).select_related('category')[:4] # เอาแค่ 4 รายการ
         return context
 
-class OutfitSearchView(generic.ListView):
-     model = Outfit
-     template_name = 'outfits/search_results.html' # เปลี่ยนชื่อ template
-     context_object_name = 'results'
 
-     def get_queryset(self):
-         query = self.request.GET.get('q')
-         if query:
-             return Outfit.objects.filter(name__icontains=query, is_available=True)
-         return Outfit.objects.none()
+class OutfitSearchView(ListView):
+    model = Outfit
+    template_name = 'outfits/list.html'
+    context_object_name = 'outfits'
+    paginate_by = 12
 
-     def get_context_data(self, **kwargs):
-         context = super().get_context_data(**kwargs)
-         context['query'] = self.request.GET.get('q', '')
-         return context
+    def get_queryset(self):
+        query = self.request.GET.get('q', '')
+        self.query = query # เก็บ query ไว้ใช้ใน get_context_data
+        if query:
+            # ค้นหาจากชื่อ หรือ description และต้อง is_active
+            return Outfit.objects.filter(
+                (Q(name__icontains=query) | Q(description__icontains=query)) & Q(is_active=True)
+            ).select_related('category')
+        return Outfit.objects.none()
 
-
-# === Cart Views ===
-
-@require_POST
-def add_to_cart(request, outfit_id):
-    cart = Cart(request)
-    outfit = get_object_or_404(Outfit, id=outfit_id, is_available=True)
-    form = AddToCartForm(request.POST)
-    if form.is_valid():
-        cd = form.cleaned_data
-        cart.add(outfit=outfit, duration_days=cd['duration_days'])
-        messages.success(request, f'"{outfit.name}" added to your cart.')
-    else:
-         messages.error(request, 'Invalid duration.') # ควรมี error handling ดีกว่านี้
-    return redirect('cart_detail') # เปลี่ยนชื่อ URL ให้ชัดเจน
-
-@require_POST
-def remove_from_cart(request, outfit_id):
-    cart = Cart(request)
-    outfit = get_object_or_404(Outfit, id=outfit_id)
-    cart.remove(outfit)
-    messages.info(request, f'"{outfit.name}" removed from your cart.')
-    return redirect('cart_detail')
-
-def cart_detail(request):
-    cart = Cart(request)
-    # เตรียม form สำหรับ update แต่ละ item ใน template
-    for item in cart:
-        item['update_duration_form'] = UpdateCartForm(initial={'duration_days': item['duration_days']})
-    return render(request, 'outfits/cart_detail.html', {'cart': cart})
-
-@require_POST
-def cart_update(request, outfit_id):
-    cart = Cart(request)
-    outfit = get_object_or_404(Outfit, id=outfit_id)
-    form = UpdateCartForm(request.POST)
-    if form.is_valid():
-        cd = form.cleaned_data
-        cart.add(outfit=outfit, duration_days=cd['duration_days'], update_duration=True)
-        messages.success(request, 'Cart updated.')
-    else:
-         messages.error(request, 'Invalid duration.')
-    return redirect('cart_detail')
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['query'] = self.query # ส่ง query ที่เก็บไว้ไปให้ template
+        context['title'] = f"ผลการค้นหาสำหรับ '{self.query}'" if self.query else "ค้นหาชุด"
+        return context
 
 
-def clear_cart(request):
-    cart = Cart(request)
-    cart.clear()
-    messages.info(request, 'Cart cleared.')
-    return redirect('cart_detail')
-
-
-# === Checkout and Rental Views ===
-
-@login_required
-def checkout(request):
-    cart = Cart(request)
-    if not cart:
-        messages.warning(request, "Your cart is empty.")
-        return redirect('outfit-list')
-
-    # คำนวณราคารวมใหม่ทุกครั้ง เผื่อราคาชุดมีการเปลี่ยนแปลง
-    total_price = cart.get_total_price()
-
-    if request.method == 'POST':
-        payment_form = PaymentForm(request.POST, request.FILES)
-        if payment_form.is_valid():
-            try:
-                # ใช้ transaction เพื่อให้แน่ใจว่าการสร้าง Rental และการเคลียร์ cart ทำพร้อมกัน
-                with transaction.atomic():
-                    # สร้าง Rental object เดียวสำหรับ checkout ครั้งนี้ (ต้องปรับ Model ถ้าต้องการเก็บหลายชุด)
-                    # *** หรือ สร้าง Rental หลายอันตามจำนวน item ในตะกร้า ? ***
-                    # แบบง่าย: สร้าง Rental สำหรับ item แรก หรือสร้าง Order ก่อน
-                    # แบบปัจจุบันในโค้ดเดิม: สร้าง Rental หลายอัน - จะลองปรับปรุงเล็กน้อย
-
-                    rental_records = []
-                    for item in cart:
-                        outfit = item['outfit']
-                        # ตรวจสอบอีกครั้งว่าชุดยังว่างอยู่ไหม
-                        if not outfit.is_available:
-                             messages.error(request, f'Sorry, "{outfit.name}" is no longer available.')
-                             return redirect('cart_detail') # กลับไปที่ตะกร้า
-
-                        rental = Rental.objects.create(
-                            user=request.user,
-                            outfit=outfit,
-                            rental_start_date=timezone.now().date(), # หรือให้ user เลือกวันเริ่ม
-                            duration_days=item['duration_days'],
-                            calculated_price=item['total_price'],
-                            payment_slip=payment_form.cleaned_data['payment_slip'],
-                            payment_date=payment_form.cleaned_data['payment_date'],
-                            status='payment_verification' # สถานะรอตรวจสอบ
-                        )
-                        rental_records.append(rental)
-
-                        # **สำคัญ:** ควร Mark ชุดว่าไม่ว่าง (is_available=False) หรือไม่?
-                        # ถ้า Mark เลย User คนอื่นจะเช่าไม่ได้ทันที แม้ยังไม่ Confirm payment
-                        # หรือจะรอ Admin Confirm แล้วค่อย Mark? -> ต้องมี Logic เพิ่ม
-                        # outfit.is_available = False
-                        # outfit.save()
-
-                    # เคลียร์ตะกร้าหลังสร้างรายการเช่าสำเร็จ
-                    cart.clear()
-
-                messages.success(request, 'Your order has been placed and is pending payment verification.')
-                return redirect('checkout_success') # Redirect ไปหน้าขอบคุณ
-
-            except Exception as e:
-                # จัดการ Error ที่อาจเกิดขึ้นระหว่าง Transaction
-                messages.error(request, f'An error occurred: {e}. Please try again.')
-                # ไม่ต้อง clear cart ถ้าเกิด Error
-
-        else:
-            messages.error(request, 'Please correct the errors in the payment form.')
-    else:
-        payment_form = PaymentForm()
-
-    # ข้อมูล Payment ควรอ่านจาก Config หรือ DB
-    bank_info = {
-        'bank_account_number': getattr(settings, 'BANK_ACCOUNT_NUMBER', 'N/A'),
-        'qr_code_image_url': getattr(settings, 'QR_CODE_IMAGE_URL', None)
-    }
-
-    return render(request, 'outfits/checkout.html', {
-        'cart': cart,
-        'total_price': total_price,
-        'payment_form': payment_form,
-        'bank_info': bank_info
-    })
-
-@login_required
-def checkout_success(request):
-    # อาจจะแสดงข้อมูล Order ล่าสุด หรือแค่ข้อความขอบคุณ
-    return render(request, 'outfits/checkout_success.html')
-
-
-# === User Profile View ===
-
-@login_required
-def user_profile(request):
-    user_rentals = Rental.objects.filter(user=request.user).order_by('-created_at')
-    return render(request, 'outfits/user_profile.html', {'rentals': user_rentals})
-
-
-# === Admin Views ===
-
-# ตรวจสอบว่าเป็น Superuser หรือไม่
-def is_admin(user):
-    return user.is_superuser
-
-@login_required
-@user_passes_test(is_admin)
+@login_required # หรือใช้ permission check
 def create_outfit(request):
+    # if not request.user.is_staff:
+    #    messages.error(request, "คุณไม่มีสิทธิ์เข้าถึงหน้านี้")
+    #    return redirect('outfits:home')
+
     if request.method == 'POST':
         form = OutfitForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Outfit created successfully!')
-            return redirect('outfit-list') # หรือไปหน้า Admin Dashboard
+            messages.success(request, f"สร้างชุด '{form.cleaned_data['name']}' สำเร็จ!")
+            # ควร redirect ไปหน้า admin หรือหน้า list ของ admin แทน
+            return redirect('outfits:outfit-list')
+        else:
+            messages.error(request, "มีข้อผิดพลาดในการสร้างชุด โปรดตรวจสอบข้อมูล")
     else:
         form = OutfitForm()
-    return render(request, 'outfits/create_outfit_form.html', {'form': form}) # สร้าง Template นี้ด้วย
+    # อย่าลืมสร้าง template 'outfits/outfit_form.html'
+    return render(request, 'outfits/outfit_form.html', {'form': form, 'title': 'สร้างชุดใหม่'})
 
-# --- Views ที่ต้อง Implement เพิ่มเติม (Conceptual) ---
 
-@login_required
-@user_passes_test(is_admin)
-def admin_rental_list(request):
-    # ดึงข้อมูล Rental ทั้งหมด หรือ Filter ตามสถานะ
-    # rentals = Rental.objects.all().order_by('-created_at')
-    # return render(request, 'outfits/admin_rental_list.html', {'rentals': rentals}) # สร้าง Template นี้
-    pass # Placeholder
+# --- View สำหรับสมัครสมาชิก ---
+def register_view(request):
+    if request.user.is_authenticated: # ถ้า login อยู่แล้ว ไม่ควรเข้าหน้านี้
+        return redirect(settings.LOGIN_REDIRECT_URL)
 
-@login_required
-@user_passes_test(is_admin)
-@require_POST # ควรใช้ POST เพื่อเปลี่ยนสถานะ
-def admin_confirm_payment(request, rental_id):
-    # rental = get_object_or_404(Rental, id=rental_id)
-    # rental.status = 'paid' # หรือ 'rented'
-    # rental.outfit.is_available = False # Mark ชุดว่าไม่ว่าง
-    # rental.save()
-    # rental.outfit.save()
-    # messages.success(request, 'Payment confirmed.')
-    # return redirect('admin_rental_list') # Redirect กลับไปหน้า List
-    pass # Placeholder
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save() # สร้าง User ใหม่ในฐานข้อมูล
+            login(request, user) # ทำการ Login ให้ User อัตโนมัติ
+            messages.success(request, f"สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ, {user.username}")
+            return redirect(settings.LOGIN_REDIRECT_URL) # Redirect ไปหน้า Home หรือหน้าที่ตั้งค่าไว้
+        else:
+            messages.error(request, "เกิดข้อผิดพลาดในการสมัครสมาชิก กรุณาตรวจสอบข้อมูล")
+    else: # GET request
+        form = UserCreationForm()
 
-@login_required
-@user_passes_test(is_admin)
+    context = {'form': form}
+    # ต้องสร้าง template 'registration/register.html'
+    return render(request, 'registration/register.html', context)
+
+
+# --- Cart Views (Session-based) ---
+
+@require_POST # บังคับให้เป็น POST request
+def add_to_cart(request, outfit_id):
+    outfit = get_object_or_404(Outfit, id=outfit_id, is_active=True)
+    cart = request.session.get('cart', {})
+    form = CartAddItemForm(request.POST)
+
+    if form.is_valid():
+        quantity = form.cleaned_data['quantity']
+        outfit_key = str(outfit_id)
+
+        cart_item = cart.get(outfit_key)
+        if cart_item:
+            # ถ้ามีอยู่แล้ว ให้บวกเพิ่ม
+            cart[outfit_key]['quantity'] += quantity
+            messages.success(request, f"เพิ่ม '{outfit.name}' อีก {quantity} ชิ้นลงในตะกร้า (รวมเป็น {cart[outfit_key]['quantity']} ชิ้น)")
+        else:
+            # ถ้ายังไม่มี ให้เพิ่มใหม่
+            cart[outfit_key] = {'quantity': quantity, 'price': str(outfit.price)} # เก็บราคา ณ ตอนเพิ่ม
+            messages.success(request, f"เพิ่ม '{outfit.name}' ({quantity} ชิ้น) ลงในตะกร้าแล้ว")
+
+        request.session['cart'] = cart
+        request.session.modified = True
+
+        # ตอบกลับเป็น JSON ถ้าเป็น AJAX request
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+             cart_item_count = sum(item['quantity'] for item in cart.values())
+             return JsonResponse({'message': 'เพิ่มสินค้าสำเร็จ', 'cart_item_count': cart_item_count})
+        else:
+            # ถ้าเป็น request ปกติ redirect ไปหน้าตะกร้า
+            return redirect('outfits:cart_detail')
+    else:
+         messages.error(request, "ข้อมูลที่ส่งมาไม่ถูกต้อง (จำนวนต้องเป็นตัวเลข)")
+         return redirect('outfits:outfit-detail', pk=outfit_id)
+
+
+def cart_detail(request):
+    cart_session = request.session.get('cart', {})
+    cart_items_context = []
+    total_cart_price = 0.0
+    outfit_ids = cart_session.keys()
+
+    outfits_in_cart = {str(o.id): o for o in Outfit.objects.filter(id__in=outfit_ids, is_active=True)}
+
+    items_to_remove = []
+    for outfit_id, item_data in cart_session.items():
+        outfit = outfits_in_cart.get(outfit_id)
+        if outfit:
+            quantity = item_data['quantity']
+            price = outfit.price # ใช้ราคาปัจจุบันจาก DB
+            item_total = float(price) * quantity
+            cart_items_context.append({
+                'outfit': outfit,
+                'quantity': quantity,
+                'update_form': CartUpdateItemForm(initial={'quantity': quantity}),
+                'total_price': item_total,
+                'price_per_item': price,
+            })
+            total_cart_price += item_total
+        else:
+            items_to_remove.append(outfit_id)
+
+    if items_to_remove:
+        cart_changed = False
+        for key in items_to_remove:
+            if key in cart_session:
+                 del cart_session[key]
+                 cart_changed = True
+        if cart_changed:
+             request.session['cart'] = cart_session
+             request.session.modified = True
+             messages.warning(request, "สินค้าบางรายการในตะกร้าไม่มีอยู่แล้วหรือถูกปิดใช้งาน และได้ถูกลบออกจากตะกร้า")
+
+    context = {
+        'cart_items': cart_items_context,
+        'total_cart_price': total_cart_price,
+    }
+    # อย่าลืมสร้าง template 'outfits/cart_detail.html'
+    return render(request, 'outfits/cart_detail.html', context)
+
 @require_POST
-def admin_mark_returned(request, rental_id):
-    # rental = get_object_or_404(Rental, id=rental_id)
-    # rental.status = 'returned'
-    # rental.outfit.is_available = True # Mark ชุดว่าว่างแล้ว
-    # rental.save()
-    # rental.outfit.save()
-    # messages.success(request, 'Outfit marked as returned.')
-    # return redirect('admin_rental_list')
-    pass # Placeholder
+def update_cart_item(request, outfit_id):
+    outfit = get_object_or_404(Outfit, id=outfit_id, is_active=True)
+    cart = request.session.get('cart', {})
+    outfit_key = str(outfit_id)
+    form = CartUpdateItemForm(request.POST)
 
-# === Home View ===
-def home(request):
-     # อาจจะแสดงชุดแนะนำ หรือข้อมูลอื่นๆ
-     featured_outfits = Outfit.objects.filter(is_available=True).order_by('?')[:3] # สุ่ม 3 ชุด
-     return render(request, 'outfits/home.html', {'featured_outfits': featured_outfits})
+    if outfit_key not in cart:
+         messages.error(request, "ไม่พบสินค้านี้ในตะกร้า")
+         return redirect('outfits:cart_detail')
+
+    if form.is_valid():
+        quantity = form.cleaned_data['quantity']
+        if quantity > 0:
+            cart[outfit_key]['quantity'] = quantity
+            request.session['cart'] = cart
+            request.session.modified = True
+            messages.success(request, f"อัปเดตจำนวน '{outfit.name}' เป็น {quantity} ชิ้น")
+        else: # ถ้า quantity เป็น 0 ให้ลบออก
+            del cart[outfit_key]
+            request.session['cart'] = cart
+            request.session.modified = True
+            messages.success(request, f"ลบ '{outfit.name}' ออกจากตะกร้าแล้ว")
+    else:
+         messages.error(request, "จำนวนที่กรอกไม่ถูกต้อง")
+
+    return redirect('outfits:cart_detail')
+
+@require_POST
+def remove_from_cart(request, outfit_id):
+    cart = request.session.get('cart', {})
+    outfit_key = str(outfit_id)
+
+    if outfit_key in cart:
+        del cart[outfit_key]
+        request.session['cart'] = cart
+        request.session.modified = True
+        messages.success(request, "ลบสินค้าออกจากตะกร้าแล้ว")
+    else:
+        messages.warning(request, "ไม่พบสินค้านี้ในตะกร้า")
+
+    return redirect('outfits:cart_detail')
+
+
+# --- Checkout and Payment Views ---
+
+@login_required
+def checkout_view(request):
+    cart_session = request.session.get('cart', {})
+    if not cart_session:
+        messages.warning(request, "ตะกร้าของคุณว่างเปล่า")
+        return redirect('outfits:outfit-list')
+
+    outfit_ids = cart_session.keys()
+    outfits_in_cart = {str(o.id): o for o in Outfit.objects.filter(id__in=outfit_ids, is_active=True)}
+    cart_items_for_form = []
+
+    items_to_remove_before_checkout = []
+    for outfit_id, item_data in cart_session.items():
+        outfit = outfits_in_cart.get(outfit_id)
+        if outfit:
+            cart_items_for_form.append({'outfit': outfit, 'quantity': item_data['quantity']})
+        else:
+            items_to_remove_before_checkout.append(outfit_id)
+
+    if items_to_remove_before_checkout:
+        cart_changed = False
+        for key in items_to_remove_before_checkout:
+            if key in cart_session:
+                del cart_session[key]
+                cart_changed = True
+        if cart_changed:
+            request.session['cart'] = cart_session
+            request.session.modified = True
+            messages.error(request, "มีสินค้าบางรายการในตะกร้าไม่มีอยู่แล้ว โปรดตรวจสอบตะกร้าของคุณอีกครั้งก่อนดำเนินการต่อ")
+            return redirect('outfits:cart_detail')
+        if not cart_session:
+             messages.warning(request, "ตะกร้าของคุณว่างเปล่า")
+             return redirect('outfits:outfit-list')
+
+    if request.method == 'POST':
+        form = CheckoutForm(request.POST)
+        if form.is_valid():
+            cleaned_data = form.cleaned_data
+            start_date = cleaned_data['rental_start_date']
+            duration = cleaned_data['rental_duration_days']
+            end_date = start_date + timedelta(days=duration - 1)
+
+            # --- ตรวจสอบ Availability ---
+            all_available = True
+            unavailable_items = []
+            for item_context in cart_items_for_form:
+                 outfit_obj = item_context['outfit']
+                 if not outfit_obj.is_available(start_date, end_date): # ต้องแน่ใจว่า is_available ทำงานถูกต้อง
+                     all_available = False
+                     unavailable_items.append(outfit_obj.name)
+
+            if not all_available:
+                 messages.error(request, f"ขออภัย ชุดต่อไปนี้ไม่ว่างในช่วงเวลาที่คุณเลือก: {', '.join(unavailable_items)}")
+                 context = {'form': form, 'cart_items': cart_items_for_form}
+                 # อย่าลืมสร้าง template 'outfits/checkout.html'
+                 return render(request, 'outfits/checkout.html', context)
+            # --- สิ้นสุดการตรวจสอบ ---
+
+            try:
+                with transaction.atomic():
+                    order = Order.objects.create(
+                        user=request.user,
+                        first_name=cleaned_data['first_name'],
+                        last_name=cleaned_data['last_name'],
+                        email=cleaned_data['email'],
+                        phone=cleaned_data['phone'],
+                        address=cleaned_data['address'],
+                        status='pending',
+                    )
+
+                    final_total_amount = 0
+                    for item_context in cart_items_for_form:
+                        outfit_obj = item_context['outfit']
+                        qty = item_context['quantity']
+                        item_price = outfit_obj.price # ราคาต่อวัน ณ ตอนสั่ง
+                        # แปลงเป็น Decimal ก่อนคูณ ถ้า price เป็น DecimalField
+                        item_total = item_price * duration * qty
+
+                        OrderItem.objects.create(
+                            order=order,
+                            outfit=outfit_obj,
+                            price=item_price,
+                            quantity=qty,
+                            rental_start_date=start_date,
+                            rental_duration_days=duration,
+                        )
+                        final_total_amount += item_total
+
+                    order.total_amount = final_total_amount
+                    order.save()
+
+                request.session['cart'] = {}
+                request.session.modified = True
+                request.session['order_id'] = order.id
+
+                messages.success(request, "สร้างคำสั่งเช่าสำเร็จ กรุณาดำเนินการชำระเงิน")
+                return redirect(reverse('outfits:payment_process'))
+
+            except Exception as e:
+                messages.error(request, f"เกิดข้อผิดพลาดในการสร้างคำสั่งเช่า: {e}")
+                # ควร Log error
+                context = {'form': form, 'cart_items': cart_items_for_form}
+                return render(request, 'outfits/checkout.html', context)
+
+    else: # GET request
+        initial_data = {}
+        if request.user.is_authenticated:
+            initial_data = {
+                'first_name': request.user.first_name,
+                'last_name': request.user.last_name,
+                'email': request.user.email,
+            }
+        form = CheckoutForm(initial=initial_data)
+
+    context = {
+        'form': form,
+        'cart_items': cart_items_for_form,
+    }
+    # อย่าลืมสร้าง template 'outfits/checkout.html'
+    return render(request, 'outfits/checkout.html', context)
+
+
+@login_required
+def payment_process_view(request):
+    order_id = request.session.get('order_id')
+    if not order_id:
+        messages.error(request, "ไม่พบข้อมูลคำสั่งเช่าสำหรับชำระเงิน")
+        return redirect('outfits:home')
+
+    try:
+        order = Order.objects.get(id=order_id, user=request.user)
+    except Order.DoesNotExist:
+         messages.error(request, "ไม่พบคำสั่งเช่า หรือคุณไม่มีสิทธิ์เข้าถึง")
+         if 'order_id' in request.session: del request.session['order_id']
+         return redirect('outfits:home')
+
+    if order.paid:
+         messages.info(request, f"คำสั่งเช่า #{order.id} ชำระเงินเรียบร้อยแล้ว")
+         return redirect('outfits:order_detail', order_id=order.id)
+
+    if order.status not in ['pending', 'failed']:
+         messages.warning(request, f"คำสั่งเช่า #{order.id} ไม่อยู่ในสถานะที่สามารถชำระเงินได้ (สถานะปัจจุบัน: {order.get_status_display()})")
+         return redirect('outfits:order_detail', order_id=order.id)
+
+    omise.api_key = settings.OMISE_SECRET_KEY
+    omise.api_version = settings.OMISE_API_VERSION
+    qr_code_image_url = None
+    error_message = None
+
+    try:
+        if not order.payment_id or order.status == 'failed':
+            charge = omise.Charge.create(
+                amount=int(order.total_amount * 100), # ต้องเป็น Integer หน่วยสตางค์
+                currency='THB',
+                description=f'Order {order.id} - {order.email}',
+                source={'type': 'promptpay'},
+                return_uri=request.build_absolute_uri(reverse('outfits:payment_result')),
+                metadata={'order_id': order.id}
+            )
+
+            if charge and charge.status == 'pending' and charge.source and charge.source.scannable_code:
+                qr_code_image_url = charge.source.scannable_code.image.download_uri
+                order.payment_id = charge.id
+                order.status = 'pending'
+                order.save()
+            elif charge:
+                 error_message = f"ไม่สามารถสร้าง QR Code ได้ สถานะ Charge: {charge.status}"
+                 if charge.failure_message: error_message += f" ({charge.failure_message})"
+            else:
+                 error_message = "ไม่สามารถสร้าง QR Code ได้ ข้อมูลไม่ถูกต้อง"
+        else:
+             try:
+                 charge = omise.Charge.retrieve(order.payment_id)
+                 if charge and charge.status == 'pending' and charge.source and charge.source.scannable_code:
+                      qr_code_image_url = charge.source.scannable_code.image.download_uri
+                 elif charge and charge.status != 'pending':
+                      error_message = f"สถานะการชำระเงินปัจจุบัน: {charge.status}. ไม่สามารถสร้าง QR Code ใหม่ได้"
+                 else:
+                      error_message = "ไม่พบข้อมูล QR Code สำหรับการชำระเงินนี้"
+             except omise.errors.NotFoundError:
+                  error_message = "ไม่พบข้อมูลการชำระเงินเดิม อาจถูกยกเลิกไปแล้ว"
+                  order.payment_id = None
+                  order.status = 'failed'
+                  order.save()
+             except omise.errors.OmiseError as e:
+                  error_message = f"เกิดข้อผิดพลาดในการดึงข้อมูล Omise เดิม: {e}"
+
+    except omise.errors.OmiseError as e:
+        error_message = f"เกิดข้อผิดพลาดในการเชื่อมต่อ Omise: {e}"
+        # ควร Log error เพิ่มเติม
+    except Exception as e:
+        error_message = f"เกิดข้อผิดพลาดไม่คาดคิด: {e}"
+        # ควร Log error เพิ่มเติม
+
+    if error_message:
+         messages.error(request, error_message)
+
+    context = {
+        'order': order,
+        'qr_code_image_url': qr_code_image_url,
+        'error_message': error_message,
+    }
+    # อย่าลืมสร้าง template 'outfits/payment_process.html'
+    return render(request, 'outfits/payment_process.html', context)
+
+
+@login_required
+def payment_result_view(request):
+    order_id = request.session.get('order_id')
+    # if 'order_id' in request.session: del request.session['order_id'] # อาจจะลบทีหลังเมื่อยืนยันว่าจ่ายแล้ว
+
+    if not order_id:
+         messages.warning(request, "ไม่พบข้อมูลติดตามผลการชำระเงิน")
+         return redirect('outfits:home')
+
+    try:
+        order = Order.objects.get(id=order_id)
+    except Order.DoesNotExist:
+         messages.error(request, "ไม่พบคำสั่งเช่าที่เกี่ยวข้อง")
+         return redirect('outfits:home')
+
+    # แสดงผลตามสถานะล่าสุดใน DB (ที่ควรถูกอัปเดตโดย webhook)
+    if order.paid and order.status == 'processing':
+        if 'order_id' in request.session: del request.session['order_id'] # ลบเมื่อยืนยันว่าจ่ายแล้ว
+        messages.success(request, f"การชำระเงินสำหรับคำสั่งเช่า #{order.id} สำเร็จเรียบร้อย!")
+        return redirect('outfits:order_confirmation', order_id=order.id)
+    elif order.status == 'pending':
+         messages.info(request, f"ระบบกำลังรอการยืนยันการชำระเงินสำหรับคำสั่งเช่า #{order.id}. กรุณาสแกน QR Code และชำระเงิน หรือตรวจสอบสถานะอีกครั้ง")
+         return redirect('outfits:payment_process') # กลับไปหน้าจ่ายเงิน/แสดง QR
+    elif order.status == 'failed':
+         messages.error(request, f"การชำระเงินสำหรับคำสั่งเช่า #{order.id} ล้มเหลว กรุณาลองใหม่อีกครั้ง")
+         # ไม่ต้องลบ order_id ออกจาก session เพื่อให้ลองใหม่ได้
+         return redirect('outfits:payment_process')
+    else:
+         messages.info(request, f"สถานะคำสั่งเช่า #{order.id}: {order.get_status_display()}")
+         if 'order_id' in request.session: del request.session['order_id'] # ลบถ้าสถานะไม่ใช่ pending/failed
+         return redirect('outfits:order_detail', order_id=order.id)
+
+
+@csrf_exempt
+def omise_webhook_view(request):
+    if request.method == 'POST':
+        try:
+            webhook_data = json.loads(request.body)
+
+            if webhook_data.get('object') == 'event' and webhook_data.get('key') == 'charge.complete':
+                charge_data = webhook_data.get('data')
+                if not charge_data or charge_data.get('object') != 'charge':
+                    return HttpResponseBadRequest("Invalid charge data")
+
+                charge_id = charge_data.get('id')
+                if not charge_id:
+                    return HttpResponseBadRequest("Missing charge ID")
+
+                try:
+                    omise.api_key = settings.OMISE_SECRET_KEY
+                    charge = omise.Charge.retrieve(charge_id)
+
+                    try:
+                        # ใช้ payment_id ที่เก็บไว้ตอนสร้าง charge ใน payment_process_view
+                        order = Order.objects.get(payment_id=charge.id)
+
+                        with transaction.atomic():
+                            order = Order.objects.select_for_update().get(pk=order.pk)
+
+                            if charge.paid and charge.status == 'successful':
+                                if not order.paid: # ทำเฉพาะเมื่อยังไม่ได้ mark ว่าจ่ายแล้ว
+                                    order.paid = True
+                                    order.status = 'processing'
+                                    order.payment_method = f"{charge.source.type.replace('_',' ').title()} (Omise)" # เก็บวิธีจ่ายเงิน
+                                    order.save()
+                                    # --- ส่ง Email ยืนยัน ---
+                                    # send_order_confirmation_email(order)
+                            elif not order.paid: # ถ้ายังไม่จ่าย และ charge ไม่สำเร็จ
+                                order.status = 'failed'
+                                order.save()
+
+                    except Order.DoesNotExist:
+                        # ไม่เจอ Order ที่ตรงกับ Payment ID นี้ -> Log ไว้ แต่ตอบ 200 OK
+                        print(f"Error: Order not found for completed charge ID {charge.id}")
+                        pass # Return 200 OK below
+
+                except omise.errors.OmiseError as e:
+                    print(f"Error retrieving Omise charge {charge_id} in webhook: {e}")
+                    return HttpResponseServerError("Omise API Error")
+                except Exception as e:
+                    print(f"Error processing webhook for charge {charge_id}: {e}")
+                    return HttpResponseServerError("Webhook Processing Error")
+
+            # ตอบ 200 OK ให้ Omise เสมอถ้าได้รับ Event ที่รู้จัก (charge.complete)
+            return HttpResponse(status=200)
+
+        except json.JSONDecodeError:
+            return HttpResponseBadRequest("Invalid JSON")
+        except Exception as e:
+            print(f"Unexpected error in webhook view: {e}")
+            return HttpResponseServerError("Webhook Processing Error")
+    else:
+        return HttpResponseBadRequest("Method Not Allowed")
+
+
+# --- Order Status/History Views ---
+
+@login_required
+def order_confirmation_view(request, order_id):
+     try:
+         order = Order.objects.prefetch_related('items', 'items__outfit').get(id=order_id, user=request.user)
+     except Order.DoesNotExist:
+          messages.error(request, "ไม่พบคำสั่งเช่าที่คุณต้องการ")
+          return redirect('outfits:order_history')
+
+     # ควรเช็คว่าจ่ายเงินแล้วจริงๆ หรืออย่างน้อยสถานะเป็น processing
+     if not order.paid or order.status not in ['processing', 'rented', 'completed']:
+         messages.warning(request, "คำสั่งเช่ายังไม่ได้ยืนยันการชำระเงิน")
+         return redirect('outfits:order_detail', order_id=order.id)
+
+     context = {'order': order}
+     # อย่าลืมสร้าง template 'outfits/order_confirmation.html'
+     return render(request, 'outfits/order_confirmation.html', context)
+
+@login_required
+def order_history_view(request):
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')
+    context = {'orders': orders}
+    # อย่าลืมสร้าง template 'outfits/order_history.html'
+    return render(request, 'outfits/order_history.html', context)
+
+@login_required
+def order_detail_view(request, order_id):
+    try:
+        order = Order.objects.prefetch_related('items', 'items__outfit', 'items__outfit__category').get(id=order_id, user=request.user)
+    except Order.DoesNotExist:
+         messages.error(request, "ไม่พบคำสั่งเช่าที่คุณต้องการ")
+         return redirect('outfits:order_history')
+
+    context = {'order': order}
+    # อย่าลืมสร้าง template 'outfits/order_detail_customer.html'
+    return render(request, 'outfits/order_detail_customer.html', context)

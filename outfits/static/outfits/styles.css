@@ -1,36 +1,276 @@
-body {
-  background-color: #FAF9F6;
-  font-family: Poppins, sans-serif;
-  color: #2E2E2E;
+/* static/outfits/styles.css */
+
+/* ---------- Variables ---------- */
+:root {
+  --primary-color: #f48fb1; /* soft pink */
+  --secondary-color: #aed581; /* soft green */
+  --background-color: #fefefe;
+  --text-color: #333;
+  --accent-color: #ff80ab; /* darker pink */
+
+  --font-family: 'Inter', 'Segoe UI', sans-serif;
+  --border-radius: 12px;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
-header {
-  background-color: #5C8374;
-  color: #FAF9F6;
-  padding: 1rem;
-}
-h1 {
+
+/* ---------- Reset ---------- */
+* {
+  box-sizing: border-box;
   margin: 0;
+  padding: 0;
 }
-nav a {
-  color: #FAF9F6;
-  margin: 0 10px;
-  text-decoration: none;
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.6;
 }
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* ---------- Layout ---------- */
 .container {
-  padding: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px;
 }
-.outfit-card {
-  background-color: #FFFFFF;
-  border-radius: 15px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+
+header, footer {
+  background-color: white;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
 }
-button {
-  background-color: #D8A7B1;
+
+footer {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #777;
+}
+
+nav a {
+  margin-right: 15px;
+  text-decoration: none;
+  color: var(--text-color);
+}
+
+nav a:hover {
+  color: var(--primary-color);
+}
+
+/* ---------- Typography ---------- */
+h1, h2, h3, h4 {
+  color: var(--primary-color);
+  margin-bottom: 10px;
+}
+
+p {
+  margin-bottom: 10px;
+}
+
+/* ---------- Forms ---------- */
+input, textarea, select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: var(--border-radius);
+  margin-bottom: 15px;
+  font-size: 1rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+form button {
+  background-color: var(--primary-color);
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  padding: 10px 20px;
+  border-radius: var(--border-radius);
   cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+form button:hover {
+  background-color: var(--accent-color);
+}
+
+/* ---------- Buttons ---------- */
+.button {
+  display: inline-block;
+  padding: 10px 20px;
+  border-radius: var(--border-radius);
+  text-align: center;
+  text-decoration: none;
+  transition: 0.3s;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.primary-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+}
+
+.primary-button:hover {
+  background-color: var(--accent-color);
+}
+
+.secondary-button {
+  background-color: var(--secondary-color);
+  color: white;
+  border: none;
+}
+
+.secondary-button:hover {
+  background-color: #9ccc65;
+}
+
+.alert-button {
+  background-color: #f44336;
+  color: white;
+}
+
+.small-button {
+  padding: 6px 12px;
+  font-size: 0.9rem;
+}
+
+.tiny-button {
+  padding: 4px 8px;
+  font-size: 0.8rem;
+}
+
+.link-button {
+  background: none;
+  color: var(--primary-color);
+  border: none;
+  padding: 0;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---------- Outfit Cards ---------- */
+.outfit-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin-top: 20px;
+}
+
+.outfit-card, .outfit-item-card {
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+
+.outfit-card:hover, .outfit-item-card:hover {
+  transform: translateY(-3px);
+}
+
+.outfit-card img, .outfit-item-card img {
+  width: 100%;
+  height: auto;
+  border-bottom: 1px solid #eee;
+}
+
+.outfit-card-body, .outfit-info {
+  padding: 15px;
+}
+
+.outfit-card-title {
+  font-size: 1.1rem;
+  margin-bottom: 5px;
+}
+
+.outfit-card-price {
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.outfit-actions {
+  margin-top: 10px;
+}
+
+.outfit-card-category {
+  font-size: 0.85rem;
+  color: grey;
+  margin-bottom: 5px;
+}
+
+/* ---------- Hero Section ---------- */
+.hero {
+  background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+  color: white;
+  padding: 60px 20px;
+  border-radius: var(--border-radius);
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.hero .tagline {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+}
+
+/* ---------- Cart Badge ---------- */
+.cart-badge {
+  background-color: red;
+  color: white;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border-radius: 50%;
+  margin-left: 5px;
+}
+
+/* ---------- Messages ---------- */
+.alert {
+  border-radius: var(--border-radius);
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  border-left: 5px solid #28a745;
+}
+
+.alert-error, .alert-danger {
+  background-color: #f8d7da;
+  border-left: 5px solid #dc3545;
+}
+
+.alert-info {
+  background-color: #d1ecf1;
+  border-left: 5px solid #17a2b8;
+}
+
+/* ---------- Responsive Fixes ---------- */
+@media (max-width: 768px) {
+  .outfit-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .hero h1 {
+    font-size: 2rem;
+  }
+
+  .hero .tagline {
+    font-size: 1rem;
+  }
 }

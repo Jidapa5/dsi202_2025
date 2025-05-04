@@ -1,0 +1,17 @@
+<div class="outfit-detail-container" style="text-align: center;">
+      <div class="outfit-image">
+        <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}">
+      </div>
+      <div class="outfit-info">
+        <h2>{{ outfit.name }}</h2>
+        <p class="price">ราคาต่อวัน: {{ outfit.price }} บาท</p>
+        <p class="description">{{ outfit.description }}</p>
+  
+        <form method="POST" class="rental-form">
+          {% csrf_token %}
+          <label for="days">ระยะเวลาเช่า (วัน):</label>
+          <input type="number" id="days" name="rental_days" min="1" required>
+          <button type="submit">เช่าชุดนี้</button>
+        </form>
+      </div>
+    </div>

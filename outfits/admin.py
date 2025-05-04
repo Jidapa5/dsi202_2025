@@ -1,116 +1,80 @@
-from django.contrib import admin, messages # เพิ่ม messages
-from django.utils.html import format_html # สำหรับสร้าง Link ใน Admin
-from .models import Outfit, Rental
+# outfits/admin.py
+from django.contrib import admin
+# อัปเดต import ให้ครบ
+from .models import Outfit, Category, Order, OrderItem
 
+# --- Category Admin (เหมือนเดิม) ---
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug')
+    prepopulated_fields = {'slug': ('name',)}
+    search_fields = ('name',)
+
+# --- Outfit Admin (แก้ไข) ---
 @admin.register(Outfit)
 class OutfitAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price', 'size', 'material', 'is_available')
-    list_filter = ('is_available', 'size', 'material')
-    search_fields = ('name', 'description', 'material')
-    list_editable = ('is_available',) # อาจจะให้แก้ is_available จากหน้า List ได้เลย
+    # แก้ไข list_display เอา is_rented ออก ใส่ is_active แทน
+    list_display = ('name', 'category', 'price', 'is_active') # <--- แก้ไขบรรทัดนี้
+    list_filter = ('category', 'is_active') # <--- แก้ไขบรรทัดนี้ให้ตรงกัน
+    search_fields = ('name', 'description')
+    list_editable = ('price', 'is_active')
+    autocomplete_fields = ('category',)
+    readonly_fields = ('image_preview',)
 
-@admin.register(Rental)
-class RentalAdmin(admin.ModelAdmin):
-    list_display = (
-        'id',
-        'user_link', # เปลี่ยนจาก 'user'
-        'outfit_link', # เปลี่ยนจาก 'outfit'
-        'rental_start_date',
-        'duration_days',
-        'status',
-        'payment_slip_link', # เปลี่ยนจาก 'payment_slip'
-        'payment_date',
-        'created_at'
+    def image_preview(self, obj):
+        from django.utils.html import format_html
+        if obj.image:
+            return format_html('<img src="{}" style="max-height: 100px; max-width: 100px;" />', obj.image.url)
+        return "(No image)"
+    image_preview.short_description = 'Preview'
+
+# --- OrderItem Inline Admin (เหมือนเดิม) ---
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    fields = ('outfit', 'price', 'rental_start_date', 'rental_duration_days', 'quantity', 'get_cost', 'get_rental_end_date')
+    readonly_fields = ('price', 'get_cost', 'get_rental_end_date')
+    extra = 0
+    can_delete = False
+    autocomplete_fields = ('outfit',)
+
+    def get_cost(self, obj):
+        return obj.get_cost()
+    get_cost.short_description = 'ราคารวมรายการนี้'
+
+    def get_rental_end_date(self, obj):
+        return obj.get_rental_end_date()
+    get_rental_end_date.short_description = 'วันสิ้นสุดเช่า'
+
+# --- Order Admin (เหมือนเดิม) ---
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user_display', 'created_at', 'status', 'total_amount', 'paid', 'payment_method')
+    list_filter = ('status', 'paid', 'created_at')
+    search_fields = ('id', 'first_name', 'last_name', 'email', 'phone', 'user__username', 'payment_id')
+    readonly_fields = ('id', 'user_link', 'created_at', 'updated_at', 'total_amount', 'payment_id') # เพิ่ม id
+    list_editable = ('status',)
+    inlines = [OrderItemInline]
+
+    fieldsets = (
+        ('ข้อมูลคำสั่งเช่า', {'fields': ('id', 'user_link', 'status', 'created_at', 'updated_at')}),
+        ('ข้อมูลลูกค้า', {'fields': ('first_name', 'last_name', 'email', 'phone', 'address')}),
+        ('ข้อมูลการชำระเงิน', {'fields': ('total_amount', 'paid', 'payment_method', 'payment_id')}),
     )
-    list_filter = ('status', 'rental_start_date', 'payment_date')
-    search_fields = ('user__username', 'outfit__name', 'id') # ค้นหาจาก username, ชื่อชุด, ID
-    readonly_fields = ('created_at', 'updated_at', 'calculated_price', 'user_link', 'outfit_link', 'payment_slip_link') # ทำให้ Field บางอันอ่านได้อย่างเดียว
-    list_per_page = 25 # แสดงผลหน้าละ 25 รายการ
-    ordering = ('-created_at',) # เรียงตามวันที่สร้างล่าสุดก่อน
 
-    # --- Custom Action สำหรับยืนยันการชำระเงิน ---
-    def confirm_payment_action(self, request, queryset):
-        """
-        Action เพื่อเปลี่ยนสถานะ Rental ที่เลือกเป็น 'Paid'
-        และ Mark Outfit ว่า is_available = False
-        """
-        updated_count = 0
-        for rental in queryset:
-            # ทำงานเฉพาะกับ Rental ที่รอการตรวจสอบ และมีสลิปแนบมา
-            if rental.status == 'payment_verification' and rental.payment_slip:
-                rental.status = 'paid' # หรืออาจจะเป็น 'rented' ถ้าจะให้เริ่มเช่าเลย
-                rental.save()
+    def user_display(self, obj):
+        return obj.user.username if obj.user else "Guest"
+    user_display.short_description = 'ผู้ใช้'
 
-                # Mark Outfit ว่าไม่ว่างแล้ว
-                rental.outfit.is_available = False
-                rental.outfit.save()
-
-                updated_count += 1
-            elif rental.status != 'payment_verification':
-                 # แจ้งเตือนถ้าเลือกรายการที่ไม่ใช่สถานะ payment_verification
-                 self.message_user(request, f"Rental ID {rental.id} is not in 'Payment Verification' status.", messages.WARNING)
-            elif not rental.payment_slip:
-                 # แจ้งเตือนถ้าไม่มีสลิป
-                 self.message_user(request, f"Rental ID {rental.id} does not have a payment slip.", messages.WARNING)
-
-
-        if updated_count > 0:
-            self.message_user(request, f'Successfully confirmed payment for {updated_count} rental(s). Outfit availability updated.', messages.SUCCESS)
-        else:
-             self.message_user(request, 'No rentals were updated. Please check status and payment slip.', messages.INFO)
-
-
-    confirm_payment_action.short_description = "✅ Confirm Payment & Mark Outfit Unavailable" # ชื่อที่จะแสดงใน Dropdown
-
-    # --- Custom Action สำหรับ Mark ว่าคืนชุดแล้ว ---
-    def mark_returned_action(self, request, queryset):
-        """
-        Action เพื่อเปลี่ยนสถานะ Rental ที่เลือกเป็น 'Returned'
-        และ Mark Outfit ว่า is_available = True
-        """
-        updated_count = 0
-        # ทำงานเฉพาะกับ Rental ที่จ่ายเงินแล้ว หรือกำลังถูกเช่า
-        eligible_statuses = ['paid', 'rented']
-        for rental in queryset.filter(status__in=eligible_statuses):
-            rental.status = 'returned'
-            rental.save()
-
-            # Mark Outfit ว่าว่างแล้ว
-            # อาจจะต้องเช็คก่อนว่าไม่มี Rental อื่นที่ Active ของชุดนี้อยู่ (กรณีซับซ้อน)
-            rental.outfit.is_available = True
-            rental.outfit.save()
-
-            updated_count += 1
-
-        if updated_count > 0:
-            self.message_user(request, f'Successfully marked {updated_count} rental(s) as returned. Outfit availability updated.', messages.SUCCESS)
-        else:
-            self.message_user(request, f'No rentals were marked as returned (they might not be in "Paid" or "Rented" status).', messages.WARNING)
-
-    mark_returned_action.short_description = "↩️ Mark as Returned & Make Outfit Available"
-
-    # --- กำหนด Actions ที่จะใช้ ---
-    actions = [confirm_payment_action, mark_returned_action]
-
-    # --- ทำให้ Field ที่เป็น ForeignKey หรือ FileField แสดงเป็น Link ---
-    @admin.display(description='User')
     def user_link(self, obj):
-        # สร้าง Link ไปยังหน้า User ใน Admin (ถ้า User model register ไว้)
-        # หรือจะแสดงแค่ username ก็ได้ obj.user.username
         from django.urls import reverse
-        link = reverse("admin:auth_user_change", args=[obj.user.id]) # ต้องเช็ค path ของ user admin
-        return format_html('<a href="{}">{}</a>', link, obj.user.username)
+        from django.utils.html import format_html
+        if obj.user:
+            url = reverse("admin:auth_user_change", args=[obj.user.id])
+            return format_html('<a href="{}">{}</a>', url, obj.user.username)
+        return "Guest"
+    user_link.short_description = 'ผู้ใช้ (ลิงก์)'
 
-    @admin.display(description='Outfit')
-    def outfit_link(self, obj):
-        # สร้าง Link ไปยังหน้า Outfit ใน Admin
-        from django.urls import reverse
-        link = reverse("admin:outfits_outfit_change", args=[obj.outfit.id]) # outfits_outfit คือ appname_modelname
-        return format_html('<a href="{}">{}</a>', link, obj.outfit.name)
-
-    @admin.display(description='Payment Slip')
-    def payment_slip_link(self, obj):
-        # แสดง Link ไปยังไฟล์สลิป
-        if obj.payment_slip:
-            return format_html('<a href="{}" target="_blank">View Slip</a>', obj.payment_slip.url)
-        return "No Slip"
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return self.readonly_fields + ('first_name', 'last_name', 'email', 'phone', 'address', 'paid', 'payment_method')
+        return self.readonly_fields

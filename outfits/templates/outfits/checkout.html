@@ -1,75 +1,55 @@
+{# outfits/templates/outfits/checkout.html #}
 {% extends 'outfits/base.html' %}
-{% load static %} {# เพิ่มเผื่อใช้ static file อื่นๆ #}
+{% load humanize %}
 
-{% block title %}Checkout - MindVibe{% endblock %} {# ตั้ง Title #}
+{% block title %}Checkout - ยืนยันข้อมูลการเช่า{% endblock %}
 
 {% block content %}
-    <h2>Checkout</h2>
+  <h2>Checkout - ยืนยันข้อมูลการเช่า</h2>
 
-    {% if cart %} {# เช็คว่ามี cart object (จาก context processor) #}
-        <h3>Order Summary</h3>
-        <table border="1" style="width:100%; border-collapse: collapse; margin-bottom: 20px;">
-            <thead>
-                <tr>
-                    <th>Outfit</th>
-                    <th>Duration (Days)</th> {# เปลี่ยนจาก Quantity เป็น Duration #}
-                    <th>Price per Day</th>
-                    <th>Subtotal</th>
-                </tr>
-            </thead>
-            <tbody>
-                {# วนลูปจาก cart object โดยตรง (ซึ่ง __iter__ ใน Cart class จะจัดการให้) #}
-                {% for item in cart %}
-                    <tr>
-                        <td>
-                            {# แสดงรูปเล็กๆ และชื่อ #}
-                            {% if item.outfit.image %}
-                                <img src="{{ item.outfit.image.url }}" alt="{{ item.outfit.name }}" height="40" style="vertical-align: middle; margin-right: 10px;">
-                            {% endif %}
-                            {{ item.outfit.name }}
-                        </td>
-                        <td>{{ item.duration_days }}</td> {# แสดง duration_days #}
-                        <td>{{ item.price|floatformat:2 }} Baht</td> {# แสดงราคาต่อหน่วย (ต่อวัน) #}
-                        <td>{{ item.total_price|floatformat:2 }} Baht</td> {# แสดงราคารวมของ item นี้ #}
-                    </tr>
-                {% endfor %}
-                 <tr style="font-weight: bold;">
-                    <td colspan="3" style="text-align: right;">Grand Total:</td>
-                    {# ใช้ cart.get_total_price หรือ total_price จาก context ก็ได้ #}
-                    <td>{{ cart.get_total_price|floatformat:2 }} Baht</td>
-                </tr>
-            </tbody>
-        </table>
+  <div style="display: flex; flex-wrap: wrap; gap: 20px;">
 
-        <div class="payment-info" style="margin-bottom: 20px; padding: 15px; background-color: #f8f8f8; border-radius: 8px;">
-            <h3>Payment Information</h3>
-            <p>Please transfer the total amount (<strong>{{ cart.get_total_price|floatformat:2 }} Baht</strong>) to the following account:</p>
-            {# ใช้ bank_info จาก context ที่ส่งมาจาก view #}
-            <p><strong>Bank Account Number:</strong> {{ bank_info.bank_account_number|default:"N/A" }}</p>
+    {# ส่วนสรุปรายการสินค้า (อาจจะดึงมาจาก cart_items ใน context) #}
+    <div class="checkout-summary" style="flex: 1; min-width: 250px; border: 1px solid #eee; padding: 15px;">
+      <h3>สรุปรายการเช่า</h3>
+      {% if cart_items %}
+        <ul>
+          {% for item in cart_items %}
+            <li>
+                {{ item.quantity }} x {{ item.outfit.name }}
+                ({{ item.outfit.price|floatformat:2|intcomma }} บาท/วัน)
+            </li>
+          {% endfor %}
+        </ul>
+        {# แสดงยอดรวมคร่าวๆ จากตะกร้า (ยังไม่รวม duration) ถ้าต้องการ #}
+        {# <p><strong>ยอดรวมเบื้องต้น: {{ total_cart_price|floatformat:2|intcomma }} บาท</strong></p> #}
+        <hr>
+      {% else %}
+        <p>ไม่มีสินค้าในตะกร้า</p>
+        <p><a href="{% url 'outfits:outfit-list' %}">กลับไปเลือกชุด</a></p>
+        {# ถ้าไม่มีสินค้า ไม่ควรแสดงฟอร์ม checkout ด้านล่าง #}
+      {% endif %}
+    </div>
 
-            {# เช็คว่ามี URL ของ QR Code หรือไม่ก่อนแสดง #}
-            {% if bank_info.qr_code_image_url %}
-                <p><strong>Scan QR Code for Payment:</strong></p>
-                <img src="{{ bank_info.qr_code_image_url }}" alt="QR Code Payment" style="max-width: 200px; height: auto;">
-            {% else %}
-                {# อาจจะใส่ข้อความอื่นถ้าไม่มี QR Code #}
-            {% endif %}
-        </div>
+    {# ส่วนฟอร์มกรอกข้อมูล #}
+    <div class="checkout-form" style="flex: 2; min-width: 300px;">
+      <h3>ข้อมูลการติดต่อและวันที่เช่า</h3>
+      {% if cart_items %} {# แสดงฟอร์มเฉพาะเมื่อมีของในตะกร้า #}
+        <form method="post">
+          {% csrf_token %}
 
-        <div class="payment-form-section">
-             <h3>Upload Payment Slip</h3>
-             <p>After transferring, please upload your payment slip and fill in the date/time of payment below.</p>
-            {# ฟอร์มสำหรับอัปโหลดสลิปและวันที่โอน #}
-            <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                {{ payment_form.as_p }} {# แสดง PaymentForm ที่ส่งมาจาก view #}
-                <button type="submit" class="button">Submit Payment Information</button>
-            </form>
-        </div>
+          {# แสดงฟอร์ม Checkout ที่ส่งมาจาก View #}
+          {{ form.as_p }}
 
-    {% else %}
-        {# แสดงเมื่อตะกร้าว่าง #}
-        <p>Your cart is empty. You cannot proceed to checkout.</p>
-        <p><a href="{% url 'outfits:outfit-list' %}" class="button">Continue Shopping</a></p>
-    {% endif %}
+          <p style="margin-top: 20px;">
+            <button type="submit" class="button primary-button">ยืนยันข้อมูลและดำเนินการต่อ</button>
+          </p>
+          <p><small>เมื่อกดปุ่มนี้ ระบบจะสร้างคำสั่งเช่า และนำคุณไปยังหน้าชำระเงิน</small></p>
+
+        </form>
+      {% endif %}
+    </div>
+
+  </div>
+
 {% endblock %}
