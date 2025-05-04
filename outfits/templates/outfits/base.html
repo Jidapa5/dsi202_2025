@@ -3,30 +3,76 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>MindVibe</title>
+  {# ใช้ block title เพื่อให้แต่ละหน้ากำหนด Title ของตัวเองได้ #}
+  <title>{% block title %}MindVibe{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'outfits/styles.css' %}">
+  {# เพิ่ม block สำหรับ CSS เพิ่มเติม ถ้าต้องการ #}
+  {% block extra_head %}{% endblock %}
 </head>
 <body>
   <header>
-    <h1>MindVibe</h1>
+    <h1><a href="{% url 'outfits:home' %}" style="color: #FAF9F6; text-decoration: none;">MindVibe</a></h1> {# ทำให้ Title เป็น Link กลับหน้า Home #}
     <nav>
-      <a href="{% url 'home' %}">Home</a>
-      <a href="{% url 'outfit-list' %}">Outfits</a>
-      {% if user.is_authenticated %}  <a href="{% url 'logout' %}">Logout</a>
+      <a href="{% url 'outfits:home' %}">Home</a>
+      <a href="{% url 'outfits:outfit-list' %}">Outfits</a>
+      {# --- เพิ่ม Link ไปยัง Cart --- #}
+      <a href="{% url 'outfits:cart_detail' %}">
+          Cart
+          {% if cart|length > 0 %} {# เช็คว่า cart มี item ไหม (ต้องมี cart_context processor) #}
+            <span class="cart-count">({{ cart|length }})</span> {# แสดงจำนวน item #}
+          {% endif %}
+      </a>
+      {# --- จบ Link Cart --- #}
+
+      {% if user.is_authenticated %}
+        {# --- เพิ่ม Link ไปยัง Profile --- #}
+        <a href="{% url 'outfits:user_profile' %}">Profile</a>
+        {# --- จบ Link Profile --- #}
+
+        {# --- เพิ่ม Links สำหรับ Admin --- #}
+        {% if user.is_superuser %}
+           <a href="{% url 'admin:index' %}">Admin Site</a> {# Link ไปหน้า Django Admin #}
+           {# --- ลบ Link 'Add Outfit' ออกแล้ว --- #}
+           {# <a href="{% url 'outfits:admin_rental_list' %}">Manage Rentals</a> #} {# ถ้าสร้าง View นี้แล้ว #}
+        {% endif %}
+        {# --- จบ Links Admin --- #}
+
+        {# --- เปลี่ยน Logout เป็น Button ใน Form (ใช้ POST) --- #}
+        <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: inline; margin-left: 10px;">
+            {% csrf_token %}
+            <button type="submit" class="nav-button">Logout ({{ user.username }})</button> {# แสดงชื่อผู้ใช้ด้วย #}
+        </form>
+        {# --- จบ Logout Button --- #}
+
       {% else %}
         <a href="{% url 'login' %}">Login</a>
         <a href="{% url 'register' %}">Register</a>
       {% endif %}
     </nav>
-    {% if messages %}  <ul class="messages">
+  </header>
+
+  {# --- เพิ่มส่วนแสดง Messages --- #}
+  {% if messages %}
+    <ul class="messages">
         {% for message in messages %}
+            {# เพิ่ม class ตาม message tag (success, error, warning, info) เพื่อ styling #}
             <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
         {% endfor %}
     </ul>
-    {% endif %}
-  </header>
+  {% endif %}
+  {# --- จบส่วน Messages --- #}
+
   <div class="container">
+    {# Block หลักสำหรับเนื้อหาของแต่ละหน้า #}
     {% block content %}{% endblock %}
   </div>
+
+  <footer>
+      {# เพิ่ม Footer ถ้าต้องการ #}
+      <p>&copy; {% now "Y" %} MindVibe Outfit Rental. All rights reserved.</p>
+  </footer>
+
+  {# เพิ่ม block สำหรับ JavaScript ถ้าต้องการ #}
+  {% block extra_scripts %}{% endblock %}
 </body>
 </html>

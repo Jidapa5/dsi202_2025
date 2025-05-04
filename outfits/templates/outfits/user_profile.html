@@ -1,0 +1,52 @@
+{% extends 'outfits/base.html' %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<h2>My Profile</h2>
+<p>Welcome, {{ user.username }}!</p>
+
+<h3>My Rental History</h3>
+{% if rentals %}
+    <table border="1" style="width:100%; border-collapse: collapse;">
+        <thead>
+            <tr>
+                <th>Order Date</th>
+                <th>Outfit</th>
+                <th>Duration</th>
+                <th>Return Date</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Payment Slip</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rental in rentals %}
+                <tr>
+                    <td>{{ rental.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ rental.outfit.name }}</td>
+                    <td>{{ rental.duration_days }} day(s)</td>
+                    <td>{{ rental.return_date|date:"Y-m-d"|default:"N/A" }}</td>
+                    <td>{{ rental.calculated_price }}</td>
+                    <td>{{ rental.get_status_display }}</td> {# แสดงชื่อสถานะเต็ม #}
+                    <td>
+                        {% if rental.payment_slip %}
+                            <a href="{{ rental.payment_slip.url }}" target="_blank">View Slip</a>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="7">You have no rental history yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>You have no rental history yet.</p>
+{% endif %}
+
+<p><a href="{% url 'outfits:outfit-list' %}">Browse Outfits</a></p>
+{% endblock %}

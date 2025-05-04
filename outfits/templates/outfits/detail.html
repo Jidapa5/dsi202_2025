@@ -1,15 +1,44 @@
 {% extends 'outfits/base.html' %}
+{% load static %} {# เพิ่ม load static ถ้าจะใช้รูป placeholder #}
+
+{% block title %}{{ outfit.name }} - MindVibe{% endblock %} {# กำหนด Title ของหน้า #}
+
 {% block content %}
 <h2>{{ outfit.name }}</h2>
-<img src="{{ outfit.image.url }}" width="300">
-<p>{{ outfit.description }}</p>
-<p>ราคาต่อวัน: {{ outfit.price|floatformat:2 }} บาท</p>
-<p>ขนาด: {{ outfit.size }}</p>  <p>วัสดุ: {{ outfit.material }}</p>  {% if outfit.is_rented %}
-  <button disabled>ถูกเช่าแล้ว</button>
+
+{# เช็คว่ามีรูปภาพไหม ก่อนแสดงผล #}
+{% if outfit.image %}
+    <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}" width="300" style="max-width: 100%; height: auto;">
 {% else %}
-  <form method="post" action="{% url 'rent-outfit' outfit.pk %}">  {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">เช่าชุดนี้</button>
-  </form>
+    <img src="{% static 'outfits/placeholder.png' %}" alt="No image available" width="300"> {# รูปสำรอง ถ้าไม่มีรูป #}
 {% endif %}
+
+<p>{{ outfit.description|linebreaks }}</p> {# ใช้ linebreaks filter เผื่อ description มีหลายบรรทัด #}
+{# ราคา (DecimalField ไม่ต้องใช้ floatformat ก็ได้ แต่ใส่ไว้ก็ได้) #}
+<p>ราคาต่อวัน: {{ outfit.price|floatformat:2 }} บาท</p>
+<p>ขนาด: {{ outfit.size|default:"-" }}</p> {# ใช้ default ถ้าไม่มีค่า #}
+<p>วัสดุ: {{ outfit.material|default:"-" }}</p> {# ใช้ default ถ้าไม่มีค่า #}
+
+{# --- ส่วนเช็คสถานะและแสดงฟอร์ม Add to Cart --- #}
+{% if outfit.is_available %} {# เช็คจาก is_available #}
+  <div class="add-to-cart-form">
+    <h3>Rent this Outfit</h3>
+    {# ฟอร์มนี้จะส่งข้อมูลไปที่ view 'cart_add' #}
+    <form action="{% url 'outfits:cart_add' outfit.id %}" method="post">
+        {% csrf_token %}
+        {# แสดงฟอร์ม AddToCartForm ที่ส่งมาจาก View #}
+        {{ add_to_cart_form.as_p }}
+        <button type="submit" class="button">Add to Cart</button>
+    </form>
+  </div>
+{% else %}
+  {# ถ้า is_available เป็น False #}
+  <button disabled class="button-disabled">Currently Unavailable</button>
+  <p style="color: red; margin-top: 10px;">This outfit is currently rented out or unavailable.</p>
+{% endif %}
+{# --- จบส่วนเช็คสถานะ --- #}
+
+<hr>
+<a href="{% url 'outfits:outfit-list' %}">Back to Outfit List</a>
+
 {% endblock %}

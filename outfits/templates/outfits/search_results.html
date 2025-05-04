@@ -1,0 +1,30 @@
+{% extends 'outfits/base.html' %}
+
+{% block title %}Search Results for "{{ query }}"{% endblock %}
+
+{% block content %}
+<h2>Search Results for "{{ query }}"</h2>
+
+{% if results %}
+    <div class="outfit-grid"> {# ใช้ class เดิมจาก list หรือสร้างใหม่ #}
+        {% for outfit in results %}
+        <div class="outfit-card">
+            {% if outfit.image %}
+                <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}" width="250">
+            {% else %}
+                <img src="{% static 'outfits/placeholder.png' %}" alt="No image available" width="250"> {# ควรมีรูป placeholder #}
+            {% endif %}
+            <h3>{{ outfit.name }}</h3>
+            <p>Price: {{ outfit.price }} Baht/Day</p>
+            <p>Size: {{ outfit.size|default:"N/A" }}</p>
+            <p>Material: {{ outfit.material|default:"N/A" }}</p>
+            <a href="{% url 'outfits:outfit-detail' outfit.pk %}" class="button">View Details</a>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>No outfits found matching your query.</p>
+{% endif %}
+
+<p><a href="{% url 'outfits:outfit-list' %}">Back to Outfit List</a></p>
+{% endblock %}

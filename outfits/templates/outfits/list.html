@@ -1,21 +1,79 @@
 {% extends 'outfits/base.html' %}
+{% load static %} {# เพิ่ม load static สำหรับรูป placeholder #}
+
+{% block title %}Outfit List - MindVibe{% endblock %} {# ตั้ง Title #}
+
 {% block content %}
 <h2>Outfit List</h2>
-<form method="get" action="{% url 'outfit-search' %}">
-  <input type="text" name="q" placeholder="ค้นหาชุด">
-  <button type="submit">ค้นหา</button>
+
+{# --- Search Form --- #}
+{# แก้ action ให้ใช้ namespace #}
+<form method="get" action="{% url 'outfits:outfit-search' %}" style="margin-bottom: 20px;">
+  <input type="text" name="q" placeholder="Search outfits..." value="{{ request.GET.q }}"> {# แสดงคำค้นหาเดิม ถ้ามี #}
+  <button type="submit" class="button">Search</button>
 </form>
-{% for outfit in outfits %}
-<div class="outfit-card">
-  <img src="{{ outfit.image.url }}" width="250">
-  <h3>{{ outfit.name }}</h3>
-  <p>{{ outfit.description }}</p>
-  <p>ราคา: {{ outfit.price }} บาท</p>
-  <p>ขนาด: {{ outfit.size }}</p>  <p>วัสดุ: {{ outfit.material }}</p>  {% if outfit.is_rented %}
-    <button disabled>ถูกเช่าแล้ว</button>
-  {% else %}
-    <a href="{% url 'outfit-detail' outfit.pk %}">ดูรายละเอียด</a>
-  {% endif %}
+{# --- End Search Form --- #}
+
+{# --- Outfit Grid --- #}
+<div class="outfit-grid"> {# อาจจะใช้ CSS Grid หรือ Flexbox ใน styles.css #}
+    {% for outfit in outfits %} {# 'outfits' คือ context_object_name ที่ตั้งใน ListView #}
+    <div class="outfit-card">
+        {# เพิ่มการตรวจสอบ image และใช้ placeholder #}
+        <a href="{% url 'outfits:outfit-detail' outfit.pk %}"> {# ทำให้รูปเป็น link ด้วย #}
+        {% if outfit.image %}
+            <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}" width="250" style="max-width: 100%; height: auto; border-radius: 8px;">
+        {% else %}
+            <img src="{% static 'outfits/placeholder.png' %}" alt="No image available" width="250" style="max-width: 100%; height: auto; border-radius: 8px;">
+        {% endif %}
+        </a>
+        <h3>{{ outfit.name }}</h3>
+        {# <p>{{ outfit.description|truncatewords:15 }}</p> #} {# อาจจะย่อ description #}
+        <p>Price: {{ outfit.price|floatformat:2 }} Baht/Day</p> {# จัดรูปแบบราคา #}
+        <p>Size: {{ outfit.size|default:"-" }}</p> {# ใช้ default #}
+        <p>Material: {{ outfit.material|default:"-" }}</p> {# ใช้ default #}
+
+        {# --- Availability Check --- #}
+        {% if outfit.is_available %} {# เช็คจาก is_available #}
+            {# แก้ Link ให้ใช้ namespace #}
+            <a href="{% url 'outfits:outfit-detail' outfit.pk %}" class="button">View Details</a>
+        {% else %}
+            <button disabled class="button-disabled">Unavailable</button> {# เปลี่ยนข้อความ #}
+        {% endif %}
+        {# --- End Availability Check --- #}
+    </div>
+    {% empty %} {# เพิ่มกรณีไม่มีชุดแสดง #}
+        <p>No outfits available at the moment.</p>
+    {% endfor %}
 </div>
-{% endfor %}
+{# --- End Outfit Grid --- #}
+
+{# --- Pagination --- #}
+{# ตรวจสอบว่ามี object 'page_obj' ที่ส่งมาจาก ListView หรือไม่ #}
+{% if is_paginated %}
+<div class="pagination" style="margin-top: 20px; text-align: center;">
+    <span class="step-links">
+        {% if page_obj.has_previous %}
+            <a href="?page=1" class="button">&laquo; First</a>
+            <a href="?page={{ page_obj.previous_page_number }}" class="button">Previous</a>
+        {% else %}
+             <button disabled class="button-disabled">&laquo; First</button>
+             <button disabled class="button-disabled">Previous</button>
+        {% endif %}
+
+        <span class="current">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+        </span>
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" class="button">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}" class="button">Last &raquo;</a>
+        {% else %}
+            <button disabled class="button-disabled">Next</button>
+            <button disabled class="button-disabled">Last &raquo;</button>
+        {% endif %}
+    </span>
+</div>
+{% endif %}
+{# --- End Pagination --- #}
+
 {% endblock %}
