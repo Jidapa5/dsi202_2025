@@ -1,76 +1,83 @@
-{% extends 'outfits/base.html' %} {# หรือ base template ของคุณ #}
-{% load humanize %} {# ถ้าใช้ใน settings.py #}
+{% extends 'outfits/base.html' %}
+{% load humanize %}
 
-{% block title %}ตะกร้าสินค้า{% endblock %}
+{% block title %}ตะกร้าสินค้า - MindVibe{% endblock %}
 
 {% block content %}
-<h1>ตะกร้าสินค้าของคุณ</h1>
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <h1 class="text-3xl font-bold mb-6 text-pink-600 text-center">🛒 ตะกร้าสินค้าของคุณ</h1>
 
-{% if cart_items %}
-    {# --- ใช้ CSS จัดการ layout table ให้ดีขึ้น แทน border="1" --- #}
-    <table class="cart-table" style="width:100%; border-collapse: collapse; margin-bottom: 20px;">
+  {% if cart_items %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full bg-white shadow rounded-xl">
         <thead>
-            <tr style="border-bottom: 2px solid #ccc;">
-                <th style="text-align: left; padding: 8px;">รูปภาพ</th>
-                <th style="text-align: left; padding: 8px;">ชื่อชุด</th>
-                <th style="text-align: right; padding: 8px;">ราคาต่อวัน</th>
-                <th style="text-align: center; padding: 8px;">จำนวนชุด</th>
-                <th style="text-align: right; padding: 8px;">ราคารวม (ต่อรายการ)</th>
-                <th style="text-align: center; padding: 8px;">จัดการ</th>
-            </tr>
+          <tr class="border-b bg-pink-50 text-pink-700">
+            <th class="text-left px-4 py-3">รูปภาพ</th>
+            <th class="text-left px-4 py-3">ชื่อชุด</th>
+            <th class="text-right px-4 py-3">ราคาต่อวัน</th>
+            <th class="text-center px-4 py-3">จำนวน</th>
+            <th class="text-right px-4 py-3">รวม</th>
+            <th class="text-center px-4 py-3">จัดการ</th>
+          </tr>
         </thead>
         <tbody>
-            {% for item in cart_items %}
-            <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 8px;">
-                    {% if item.outfit.image %}
-                        <a href="{% url 'outfits:outfit-detail' item.outfit.pk %}">
-                           <img src="{{ item.outfit.image.url }}" alt="{{ item.outfit.name }}" height="60">
-                        </a>
-                    {% else %}
-                        (ไม่มีรูป)
-                    {% endif %}
-                </td>
-                <td style="padding: 8px;"><a href="{% url 'outfits:outfit-detail' item.outfit.pk %}">{{ item.outfit.name }}</a></td>
-                <td style="text-align: right; padding: 8px;">{{ item.price_per_item|floatformat:2|intcomma }}</td>
-                <td style="text-align: center; padding: 8px;">
-                    {# ฟอร์มสำหรับอัปเดตจำนวน #}
-                    <form action="{% url 'outfits:update_cart_item' item.outfit.id %}" method="post" style="display: flex; align-items: center; justify-content: center;">
-                        {% csrf_token %}
-                        {# แสดง input จำนวนจากฟอร์ม #}
-                        {{ item.update_form.quantity }}
-                        <button type="submit" class="button secondary-button tiny-button" style="margin-left: 5px;">อัปเดต</button> {# ใช้ class จาก CSS framework ของคุณ #}
-                    </form>
-                </td>
-                 {# ราคารวมต่อรายการ (Quantity * Price per item) #}
-                <td style="text-align: right; padding: 8px;">{{ item.total_price|floatformat:2|intcomma }}</td>
-                <td style="text-align: center; padding: 8px;">
-                    {# ฟอร์มสำหรับลบสินค้า #}
-                    <form action="{% url 'outfits:remove_from_cart' item.outfit.id %}" method="post" style="display: inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="button alert-button tiny-button" style="color:red;">ลบ</button> {# ใช้ class จาก CSS framework ของคุณ #}
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
+          {% for item in cart_items %}
+          <tr class="border-b hover:bg-gray-50">
+            <td class="px-4 py-3">
+              {% if item.outfit.image %}
+              <a href="{% url 'outfits:outfit-detail' item.outfit.pk %}">
+                <img src="{{ item.outfit.image.url }}" alt="{{ item.outfit.name }}" class="h-16 rounded">
+              </a>
+              {% else %}
+              (ไม่มีรูป)
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              <a href="{% url 'outfits:outfit-detail' item.outfit.pk %}" class="text-pink-600 hover:underline">
+                {{ item.outfit.name }}
+              </a>
+            </td>
+            <td class="text-right px-4 py-3">{{ item.price_per_item|floatformat:2|intcomma }}</td>
+            <td class="text-center px-4 py-3">
+              <form method="post" action="{% url 'outfits:update_cart_item' item.outfit.id %}" class="flex justify-center items-center gap-2">
+                {% csrf_token %}
+                {{ item.update_form.quantity }}
+                <button type="submit" class="text-sm px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded">อัปเดต</button>
+              </form>
+            </td>
+            <td class="text-right px-4 py-3">{{ item.total_price|floatformat:2|intcomma }}</td>
+            <td class="text-center px-4 py-3">
+              <form method="post" action="{% url 'outfits:remove_from_cart' item.outfit.id %}">
+                {% csrf_token %}
+                <button type="submit" class="text-red-600 hover:underline text-sm">ลบ</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
         </tbody>
         <tfoot>
-            <tr style="border-top: 2px solid #ccc;">
-                {# --- ปรับ colspan ให้ตรงกับจำนวนคอลัมน์ใหม่ --- #}
-                <td colspan="4" style="text-align: right; padding: 8px;"><strong>ยอดรวม (ยังไม่รวมระยะเวลาเช่า):</strong></td>
-                <td colspan="2" style="text-align: right; padding: 8px;"><strong>{{ total_cart_price|floatformat:2|intcomma }} บาท</strong></td>
-            </tr>
+          <tr class="bg-gray-100 font-bold">
+            <td colspan="4" class="text-right px-4 py-3">ยอดรวม:</td>
+            <td colspan="2" class="text-right px-4 py-3 text-pink-600">{{ total_cart_price|floatformat:2|intcomma }} บาท</td>
+          </tr>
         </tfoot>
-    </table>
-
-    <div style="margin-top: 20px; text-align: right;">
-        <a href="{% url 'outfits:outfit-list' %}" class="button secondary-button" style="margin-right: 10px;">เลือกชุดต่อ</a> {# ปุ่มกลับไปเลือกของ #}
-        <a href="{% url 'outfits:checkout' %}" class="button primary-button">ดำเนินการต่อ (Checkout)</a> {# ใช้ class จาก CSS framework ของคุณ #}
+      </table>
     </div>
 
-{% else %}
-    <p>ตะกร้าสินค้าของคุณว่างเปล่า</p>
-    <a href="{% url 'outfits:outfit-list' %}" class="button primary-button">เลือกดูชุด</a>
-{% endif %}
+    <div class="mt-6 flex justify-between items-center">
+      <a href="{% url 'outfits:outfit-list' %}" class="text-sm text-gray-600 hover:underline">← เลือกชุดเพิ่มเติม</a>
+      <a href="{% url 'outfits:checkout' %}" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700">
+        ดำเนินการต่อ
+      </a>
+    </div>
 
+  {% else %}
+    <div class="text-center py-12">
+      <p class="text-lg text-gray-600">ตะกร้าสินค้าของคุณว่างเปล่า</p>
+      <a href="{% url 'outfits:outfit-list' %}" class="mt-4 inline-block bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700">
+        เริ่มเลือกชุดเลย
+      </a>
+    </div>
+  {% endif %}
+</div>
 {% endblock %}

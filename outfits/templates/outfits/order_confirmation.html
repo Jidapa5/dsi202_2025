@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}ยืนยันคำสั่งเช่า | MindVibe{% endblock %}
+
+{% block content %}
+<div class="confirmation-container">
+    <h2 class="text-2xl font-bold mb-4">✅ การสั่งเช่าเสร็จสมบูรณ์</h2>
+    <p>ขอบคุณที่เช่าชุดกับ <strong>MindVibe</strong>!</p>
+
+    <div class="mt-6">
+        <h3 class="text-xl font-semibold">รายละเอียดคำสั่งเช่า:</h3>
+        <ul class="mt-2 list-disc list-inside">
+            <li><strong>หมายเลขออเดอร์:</strong> {{ order.id }}</li>
+            <li><strong>ชื่อ:</strong> {{ order.first_name }} {{ order.last_name }}</li>
+            <li><strong>อีเมล:</strong> {{ order.email }}</li>
+            <li><strong>โทร:</strong> {{ order.phone }}</li>
+            <li><strong>ที่อยู่จัดส่ง:</strong> {{ order.address }}</li>
+            <li><strong>วันที่เริ่มเช่า:</strong> {{ order.rental_start_date }}</li>
+            <li><strong>จำนวนวันเช่า:</strong> {{ order.rental_duration_days }} วัน</li>
+            <li><strong>ยอดรวม:</strong> ฿{{ order.total_price|floatformat:2 }}</li>
+        </ul>
+    </div>
+
+    <div class="mt-6">
+        <h3 class="text-xl font-semibold">รายการชุดที่เช่า:</h3>
+        <ul class="mt-2 space-y-2">
+            {% for item in order.items.all %}
+                <li class="border p-2 rounded">
+                    <strong>{{ item.outfit.name }}</strong> — จำนวน {{ item.quantity }} ชุด (฿{{ item.price|floatformat:2 }})
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="mt-8">
+        <a href="{% url 'outfits:outfit-list' %}" class="button">กลับไปเลือกชุดอื่น</a>
+    </div>
+</div>
+{% endblock %}

@@ -124,3 +124,16 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     X_FRAME_OPTIONS = 'DENY'
+
+# ✅ Email Configuration (ใช้ Gmail SMTP เป็นตัวอย่าง)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')  # หรือ SMTP Server อื่น
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')  # Gmail ที่ใช้ส่ง
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')  # App Password หรือรหัสจริง (แนะนำใช้ .env)
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+OMISE_SECRET_KEY = os.getenv("OMISE_SECRET_KEY")
+OMISE_PUBLIC_KEY = os.getenv("OMISE_PUBLIC_KEY")
