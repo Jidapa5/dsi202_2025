@@ -109,9 +109,6 @@ LOGIN_REDIRECT_URL = 'outfits:user_profile'
 # ✅ Session for cart
 CART_SESSION_ID = 'cart'
 
-# ✅ Omise
-OMISE_SECRET_KEY = os.environ.get('OMISE_SECRET_KEY')
-OMISE_API_VERSION = os.environ.get('OMISE_API_VERSION', '2020-05-29')
 
 # ✅ Optional Bank Info
 BANK_ACCOUNT_NUMBER = os.environ.get('BANK_ACCOUNT_NUMBER', 'โปรดระบุใน .env')
@@ -135,5 +132,3 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')  # App Password ห�
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-OMISE_SECRET_KEY = os.getenv("OMISE_SECRET_KEY")
-OMISE_PUBLIC_KEY = os.getenv("OMISE_PUBLIC_KEY")

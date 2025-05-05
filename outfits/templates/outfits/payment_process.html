@@ -1,32 +1,99 @@
 {% extends 'outfits/base.html' %}
-{% block title %}ชำระเงิน - MindVibe{% endblock %}
+{% load humanize %}
+
+{% block title %}แจ้งชำระเงิน - คำสั่งเช่า #{{ order.id }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .payment-container { max-width: 700px; margin: 30px auto; background-color: white; padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow); display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+  .bank-details, .slip-upload { padding: 20px; border: 1px solid #eee; border-radius: 8px; }
+  .bank-details h3, .slip-upload h3 { margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+  .bank-details p { margin-bottom: 8px; }
+  .bank-details strong { display: inline-block; min-width: 100px; }
+  .total-amount { font-size: 1.3em; font-weight: bold; color: var(--primary-color); margin-bottom: 15px; }
+  .bank-qr img { max-width: 200px; height: auto; margin: 15px auto; display: block; border: 1px solid #eee; padding: 5px;}
+  .form-field { margin-bottom: 15px; }
+  .form-field label { display: block; margin-bottom: 5px; font-weight: 500; }
+  .form-input, .form-datetime {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  .form-errors { color: #dc3545; font-size: 0.9em; margin-top: 5px; }
+
+  @media (max-width: 650px) {
+    .payment-container { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-xl mx-auto mt-10 bg-white p-8 rounded-2xl shadow-lg">
-  <h2 class="text-2xl font-bold text-center text-pink-600 mb-6">💳 ชำระเงินด้วย PromptPay</h2>
+<div style="max-width: 700px; margin: 20px auto;">
+    <h1 style="text-align: center; margin-bottom: 20px; color: var(--primary-color);">แจ้งการชำระเงิน</h1>
+    <p style="text-align: center; margin-bottom: 25px;">สำหรับคำสั่งเช่าหมายเลข: <strong>#{{ order.id }}</strong></p>
 
-  {% if error_message %}
-    <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
-      {{ error_message }}
-    </div>
-  {% elif qr_code_image_url %}
-    <div class="text-center">
-      <p class="text-gray-700 mb-2">กรุณาสแกน QR Code ด้านล่างเพื่อชำระเงิน:</p>
-      <img src="{{ qr_code_image_url }}" alt="QR Code สำหรับชำระเงิน" class="mx-auto w-64 h-64 rounded border shadow">
-      <p class="text-sm text-gray-500 mt-3">ยอดที่ต้องชำระ: <strong class="text-gray-800">{{ order.total_amount|floatformat:2 }} บาท</strong></p>
-    </div>
-
-    <div class="mt-6 text-center">
-      <a href="{% url 'outfits:payment_result' %}" class="inline-block bg-pink-600 text-white py-2 px-4 rounded hover:bg-pink-700 transition">
-        ตรวจสอบสถานะการชำระเงิน
-      </a>
-    </div>
-  {% else %}
-    <p class="text-gray-600">ไม่พบ QR Code สำหรับการชำระเงิน</p>
-  {% endif %}
-
-  <div class="text-center mt-6">
-    <a href="{% url 'outfits:order_detail' order.id %}" class="text-sm text-gray-500 hover:text-pink-600">← กลับไปยังรายละเอียดคำสั่งเช่า</a>
-  </div>
+    {# แสดง Messages จาก Views (เช่น กรอกฟอร์มไม่ครบ) #}
+    {% if messages %}
+     {% for message in messages %}
+         <div class="alert alert-{{ message.tags }}" role="alert">
+             {{ message }}
+         </div>
+     {% endfor %}
+    {% endif %}
 </div>
-{% endblock %}
+
+<div class="payment-container">
+
+  {# --- ส่วนแสดงข้อมูลบัญชี --- #}
+  <div class="bank-details">
+    <h3>ข้อมูลการโอนเงิน</h3>
+    <p class="total-amount">ยอดที่ต้องชำระ: {{ order.total_amount|floatformat:2|intcomma }} บาท</p>
+    <p><strong>ธนาคาร:</strong> {{ bank_details.bank_name }}</p>
+    <p><strong>ชื่อบัญชี:</strong> {{ bank_details.account_name }}</p>
+    <p><strong>เลขที่บัญชี:</strong> {{ bank_details.account_number }}</p>
+
+    {% if bank_details.qr_code_url %}
+      <div class="bank-qr" style="margin-top: 20px; text-align: center;">
+        <p>หรือสแกน QR Code:</p>
+        <img src="{{ bank_details.qr_code_url }}" alt="QR Code สำหรับโอนเงิน">
+      </div>
+    {% endif %}
+     <p style="font-size: 0.9em; color: grey; margin-top: 20px;">*กรุณาโอนเงินให้ตรงกับยอดที่ต้องชำระ และเก็บสลิปไว้เพื่อใช้ในการแจ้งโอน</p>
+  </div>
+
+  {# --- ส่วนฟอร์มอัปโหลดสลิป --- #}
+  <div class="slip-upload">
+    <h3>แจ้งโอนเงินและแนบสลิป</h3>
+    {# --- สำคัญ: ต้องมี enctype="multipart/form-data" --- #}
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      {# แสดง field errors แยกแต่ละ field #}
+      {% for field in form %}
+      <div class="form-field">
+          {{ field.label_tag }}
+          {{ field }} {# Render field และ widget ของมัน #}
+          {% if field.errors %}
+              <div class="form-errors">
+                  {% for error in field.errors %}
+                      <span>{{ error }}</span>
+                  {% endfor %}
+              </div>
+          {% endif %}
+          {% if field.help_text %}
+               <p class="help-text" style="font-size: 0.85em; color: grey; margin-top: 3px;">{{ field.help_text }}</p>
+          {% endif %}
+      </div>
+      {% endfor %}
+
+      <button type="submit" class="button primary-button" style="width: 100%; padding: 12px; margin-top: 15px;">แจ้งชำระเงิน</button>
+    </form>
+     <p style="text-align: center; margin-top: 15px;">
+        <a href="{% url 'outfits:order_detail' order.id %}" style="color: grey; font-size: 0.9em;">ยกเลิกและกลับไปดูรายละเอียด</a>
+     </p>
+  </div>
+
+</div>
+{% endblock %} 

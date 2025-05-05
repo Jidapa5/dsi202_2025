@@ -1,0 +1,15 @@
+{% extends 'outfits/base.html' %}
+
+{% block title %}โปรไฟล์ของคุณ{% endblock %}
+
+{% block content %}
+<h2>โปรไฟล์ของคุณ</h2>
+<p><strong>ชื่อผู้ใช้:</strong> {{ user.username }}</p>
+<p><strong>อีเมล:</strong> {{ user.email }}</p>
+<p><strong>ชื่อ:</strong> {{ user.first_name|default:"-" }}</p>
+<p><strong>นามสกุล:</strong> {{ user.last_name|default:"-" }}</p>
+<p><strong>วันที่เข้าร่วม:</strong> {{ user.date_joined|date:"d/m/Y" }}</p>
+
+{# เพิ่มฟอร์มแก้ไขข้อมูล ถ้าต้องการ #}
+{# <a href="{% url 'password_change' %}">เปลี่ยนรหัสผ่าน</a> #}
+{% endblock %}
