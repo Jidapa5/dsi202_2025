@@ -16,35 +16,28 @@
     .items-table th { background-color: #f8f9fa; font-weight: 500; }
     .items-table td:nth-child(2), .items-table td:nth-child(3), .items-table td:nth-child(4) { text-align: right; }
     .slip-image img { max-width: 100%; height: auto; max-height: 400px; margin-top: 10px; border: 1px solid #eee; padding: 5px; border-radius: 4px; }
-    .status-badge { padding: 3px 8px; border-radius: 12px; color: white; font-size: 0.9em; display: inline-block; }
+    .status-badge { padding: 3px 8px; border-radius: 12px; color: white; font-size: 0.9em; display: inline-block; min-width: 100px; text-align: center;}
     .status-pending, .status-waiting_for_approval { background-color: #ffc107; color: #333; }
     .status-processing { background-color: #17a2b8; }
-    .status-shipped, .status-rented, .status-return_received { background-color: #007bff; }
+    .status-shipped, .status-rented, .status-return_received, .status-return_shipped { background-color: #007bff; } /* เพิ่ม return_shipped */
     .status-completed { background-color: #28a745; }
     .status-cancelled, .status-failed { background-color: #dc3545; }
-
+    /* --- CSS สำหรับ Alert (ควรย้ายไป styles.css) --- */
+     .alert { border-radius: var(--border-radius); padding: 10px 15px; margin-bottom: 15px; border-left-width: 5px; border-left-style: solid; }
+     .alert-success { background-color: #d4edda; border-color: #28a745; color: #155724;}
+     .alert-error, .alert-danger { background-color: #f8d7da; border-color: #dc3545; color: #721c24;}
+     .alert-info { background-color: #d1ecf1; border-color: #17a2b8; color: #0c5460;}
+     .alert-warning { background-color: #fff3cd; border-color: #ffc107; color: #856404;}
 </style>
 {% endblock extra_head %}
 
 {% block content %}
 <h2 style="margin-bottom: 20px;">รายละเอียดคำสั่งเช่า #{{ order.id }}</h2>
 
- {# --- แสดง Messages --- #}
  {% if messages %}
     <div class="messages-container" style="padding-bottom: 15px;">
-         {% for message in messages %}
-             <div class="alert alert-{{ message.tags }}" role="alert" style="padding: 10px 15px; margin-bottom: 10px; border-radius: 8px; border-left: 5px solid;">
-                 {{ message }}
-             </div>
-         {% endfor %}
+         {% for message in messages %} <div class="alert alert-{{ message.tags }}">{{ message }}</div> {% endfor %}
      </div>
-     <style>
-         .alert { border-radius: var(--border-radius); padding: 10px 15px; margin-bottom: 15px; border-left-width: 5px; border-left-style: solid; }
-         .alert-success { background-color: #d4edda; border-color: #28a745; color: #155724;}
-         .alert-error, .alert-danger { background-color: #f8d7da; border-color: #dc3545; color: #721c24;}
-         .alert-info { background-color: #d1ecf1; border-color: #17a2b8; color: #0c5460;}
-         .alert-warning { background-color: #fff3cd; border-color: #ffc107; color: #856404;}
-     </style>
  {% endif %}
 
 <div class="order-detail-grid">
@@ -65,7 +58,14 @@
         <p><strong>ที่อยู่จัดส่ง:</strong><br>{{ order.address|linebreaksbr }}</p>
         <p><strong>ค่าจัดส่ง:</strong> {{ order.shipping_cost|floatformat:2|intcomma }} บาท</p>
         <p><strong>เลขพัสดุ (ส่ง):</strong> {{ order.shipping_tracking_number|default:"-" }}</p>
+        {# --- แสดงข้อมูลการส่งคืน --- #}
         <p><strong>เลขพัสดุ (คืน):</strong> {{ order.return_tracking_number|default:"-" }}</p>
+        {% if order.return_slip %}
+            <p><strong>รูป/สลิปส่งคืน:</strong> <a href="{{ order.return_slip.url }}" target="_blank">ดูรูป</a></p>
+        {% endif %}
+         {% if order.return_initiated_at %}
+            <p><strong>วันที่แจ้งส่งคืน:</strong> {{ order.return_initiated_at|date:"d/m/Y H:i" }}</p>
+        {% endif %}
     </div>
 
     {# --- ช่วงเวลาเช่าและรายการ --- #}
@@ -76,16 +76,7 @@
         <p><strong>ระยะเวลา:</strong> {{ order.rental_duration_days }} วัน</p>
         <table class="items-table">
           <thead> <tr><th>ชุด</th><th>ราคา/วัน</th><th>จำนวน</th><th>รวม</th></tr> </thead>
-          <tbody>
-            {% for item in order.items.all %}
-              <tr>
-                <td>{{ item.outfit.name }}</td>
-                <td>{{ item.price_per_day|floatformat:2|intcomma }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>{{ item.item_total_cost|floatformat:2|intcomma }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
+          <tbody> {% for item in order.items.all %} <tr> <td>{{ item.outfit.name }}</td> <td>{{ item.price_per_day|floatformat:2|intcomma }}</td> <td>{{ item.quantity }}</td> <td>{{ item.item_total_cost|floatformat:2|intcomma }}</td> </tr> {% endfor %} </tbody>
         </table>
     </div>
 
@@ -103,6 +94,13 @@
              <p style="margin-top:15px;"> <a href="{% url 'outfits:payment_process' order.id %}" class="button primary-button">แจ้งชำระเงิน</a> </p>
         {% endif %}
         {% if order.admin_payment_note %} <p style="margin-top:10px; color: #dc3545;"><strong>หมายเหตุจาก Admin:</strong> {{ order.admin_payment_note }}</p> {% endif %}
+
+        {# --- เพิ่มปุ่มแจ้งส่งคืน --- #}
+        {% if order.status in "rented,shipped" and not order.return_tracking_number %} {# เงื่อนไขแสดงปุ่ม: สถานะเหมาะสม และ ยังไม่เคยแจ้งคืน #}
+             <p style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+                <a href="{% url 'outfits:initiate_return' order.id %}" class="button secondary-button">แจ้งส่งคืนสินค้า</a>
+             </p>
+        {% endif %}
     </div>
 </div>
 

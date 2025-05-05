@@ -15,6 +15,9 @@
     input[type="file"]::file-selector-button { margin-right: 10px; border: none; background: var(--secondary-color); padding: 6px 10px; border-radius: 4px; color: #fff; cursor: pointer; transition: background .2s ease-in-out; }
     input[type="file"]::file-selector-button:hover { background: #9ccc65; }
     .order-summary-brief p { margin-bottom: 5px; font-size: 0.95em;}
+    /* --- CSS สำหรับ Alert (ควรย้ายไป styles.css) --- */
+    .alert { border-radius: var(--border-radius); padding: 10px 15px; margin-bottom: 15px; border-left-width: 5px; border-left-style: solid; } .alert-success { background-color: #d4edda; border-color: #28a745; color: #155724;} .alert-error { background-color: #f8d7da; border-color: #dc3545; color: #721c24;} .alert-info { background-color: #d1ecf1; border-color: #17a2b8; color: #0c5460;} .alert-warning { background-color: #fff3cd; border-color: #ffc107; color: #856404;}
+
 </style>
 {% endblock %}
 
@@ -28,9 +31,6 @@
        <div class="messages-container" style="padding-bottom: 15px;">
             {% for message in messages %} <div class="alert alert-{{ message.tags }}">{{ message }}</div> {% endfor %}
         </div>
-       <style> /* ควรย้ายไป styles.css */
-           .alert { border-radius: var(--border-radius); padding: 10px 15px; margin-bottom: 15px; border-left-width: 5px; border-left-style: solid; } .alert-success { background-color: #d4edda; border-color: #28a745; color: #155724;} .alert-error { background-color: #f8d7da; border-color: #dc3545; color: #721c24;} .alert-info { background-color: #d1ecf1; border-color: #17a2b8; color: #0c5460;} .alert-warning { background-color: #fff3cd; border-color: #ffc107; color: #856404;}
-       </style>
     {% endif %}
 
     {# แสดงข้อมูล Order คร่าวๆ #}
@@ -53,15 +53,12 @@
             <div class="form-field">
                 {{ field.label_tag }}
                 {{ field }}
-                {% if field.errors %}<div class="form-errors">{{ field.errors }}</div>{% endif %}
+                {% if field.errors %}<div class="form-errors"> {% for error in field.errors %}<span>{{ error }}</span>{% endfor %} </div>{% endif %}
                 {% if field.help_text %}<p class="help-text">{{ field.help_text|safe }}</p>{% endif %}
             </div>
         {% endfor %}
 
-         {# แสดง non-field errors (ถ้ามี) #}
-         {% if form.non_field_errors %}
-            <div class="form-errors">{{ form.non_field_errors }}</div>
-         {% endif %}
+         {% if form.non_field_errors %} <div class="form-errors">{{ form.non_field_errors }}</div> {% endif %}
 
         <button type="submit" class="button primary-button" style="width: 100%; padding: 12px; margin-top: 15px;">ยืนยันการแจ้งส่งคืน</button>
     </form>

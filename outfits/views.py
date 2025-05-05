@@ -1,4 +1,4 @@
-# outfits/views.py (อัปเดต profile view และ checkout view)
+# outfits/views.py (เพิ่ม initiate_return_view)
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -18,17 +18,20 @@ from decimal import Decimal
 import json
 import logging
 
-# --- Import models และ forms ---
+# --- Import models ---
 from .models import Outfit, Category, Order, OrderItem, UserProfile # เพิ่ม UserProfile
+# --- Import forms ---
 from .forms import (
     CheckoutForm, CartAddItemForm, CustomUserCreationForm,
-    OutfitForm, PaymentSlipUploadForm, UserEditForm, UserProfileForm # เพิ่ม Form ใหม่
+    OutfitForm, PaymentSlipUploadForm, UserEditForm, UserProfileForm,
+    ReturnUploadForm # <--- เพิ่ม ReturnUploadForm
 )
 
 logger = logging.getLogger(__name__)
 
 # ---------- หน้าหลัก / สมัครสมาชิก ----------
 def home(request):
+    # ... (โค้ดเดิม) ...
     featured_outfits = Outfit.objects.filter(is_active=True).order_by('?')[:6]
     categories = Category.objects.all()
     cart = request.session.get(settings.CART_SESSION_ID, {})
@@ -38,6 +41,7 @@ def home(request):
         'cart_outfit_ids': cart_outfit_ids })
 
 def register_view(request):
+    # ... (โค้ดเดิม) ...
     if request.user.is_authenticated: return redirect(settings.LOGIN_REDIRECT_URL)
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
@@ -48,6 +52,7 @@ def register_view(request):
 
 # ---------- ชุดทั้งหมด / รายละเอียด ----------
 class OutfitListView(ListView):
+    # ... (โค้ดเดิม) ...
     model=Outfit; template_name='outfits/list.html'; context_object_name='outfits'; paginate_by=12
     def get_queryset(self): return Outfit.objects.filter(is_active=True).select_related('category')
     def get_context_data(self, **kwargs):
@@ -57,6 +62,7 @@ class OutfitListView(ListView):
         return context
 
 class OutfitByCategoryListView(ListView):
+    # ... (โค้ดเดิม) ...
     model=Outfit; template_name='outfits/list.html'; context_object_name='outfits'; paginate_by=12
     def get_queryset(self): self.category = get_object_or_404(Category, slug=self.kwargs['category_slug']); return Outfit.objects.filter(category=self.category, is_active=True).select_related('category')
     def get_context_data(self, **kwargs):
@@ -65,18 +71,19 @@ class OutfitByCategoryListView(ListView):
         return context
 
 class OutfitDetailView(DetailView):
+    # ... (โค้ดเดิม) ...
     model=Outfit; template_name='outfits/detail.html'; context_object_name='outfit'
     def get_queryset(self): return Outfit.objects.filter(is_active=True).select_related('category')
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs); context['add_to_cart_form'] = CartAddItemForm()
         if self.object.category: context['related_outfits'] = Outfit.objects.filter(category=self.object.category, is_active=True).exclude(pk=self.object.pk).select_related('category')[:4]
         cart = self.request.session.get(settings.CART_SESSION_ID, {}); context['cart_outfit_ids'] = list(cart.keys())
-        try:
-            is_currently_available = self.object.is_available(timezone.now().date(), timezone.now().date()); context['current_status_text'] = "ว่าง" if is_currently_available else "ถูกเช่าอยู่"
+        try: is_currently_available = self.object.is_available(timezone.now().date(), timezone.now().date()); context['current_status_text'] = "ว่าง" if is_currently_available else "ถูกเช่าอยู่"
         except Exception as e: logger.error(f"Error checking availability: {e}"); context['current_status_text'] = "Error"
         return context
 
 class OutfitSearchView(ListView):
+    # ... (โค้ดเดิม) ...
     model=Outfit; template_name='outfits/list.html'; context_object_name='outfits'; paginate_by=12
     def get_queryset(self): query = self.request.GET.get('q', '').strip(); self.query = query; return Outfit.objects.filter(Q(name__icontains=query)|Q(description__icontains=query)|Q(category__name__icontains=query), is_active=True).select_related('category').distinct() if query else Outfit.objects.none()
     def get_context_data(self, **kwargs):
@@ -86,6 +93,7 @@ class OutfitSearchView(ListView):
 
 # ---------- ตะกร้า ----------
 def get_cart_items_and_total(request):
+    # ... (โค้ดเดิม) ...
     cart_session = request.session.get(settings.CART_SESSION_ID, {})
     cart_items_data = []; cart_subtotal_per_day = Decimal('0.00')
     outfit_ids = list(cart_session.keys())
@@ -108,11 +116,13 @@ def get_cart_items_and_total(request):
     return cart_items_data, cart_subtotal_per_day
 
 def cart_detail(request):
+    # ... (โค้ดเดิม) ...
     cart_items, cart_subtotal_per_day = get_cart_items_and_total(request)
     return render(request, 'outfits/cart_detail.html', { 'cart_items': cart_items, 'cart_subtotal_per_day': cart_subtotal_per_day })
 
 @require_POST
 def add_to_cart(request, outfit_id):
+    # ... (โค้ดเดิม) ...
     outfit = get_object_or_404(Outfit, id=outfit_id, is_active=True); cart = request.session.get(settings.CART_SESSION_ID, {}); outfit_key = str(outfit_id)
     if outfit_key in cart: messages.warning(request, f"'{outfit.name}' อยู่ในตะกร้าแล้ว")
     else: cart[outfit_key] = {'quantity': 1}; request.session[settings.CART_SESSION_ID] = cart; request.session.modified = True; messages.success(request, f"เพิ่ม '{outfit.name}' ลงในตะกร้าแล้ว")
@@ -120,6 +130,7 @@ def add_to_cart(request, outfit_id):
 
 @require_POST
 def remove_from_cart(request, outfit_id):
+    # ... (โค้ดเดิม) ...
     cart = request.session.get(settings.CART_SESSION_ID, {}); outfit_key = str(outfit_id)
     if outfit_key in cart:
         try: outfit_name = Outfit.objects.get(id=outfit_id).name
@@ -132,6 +143,7 @@ def remove_from_cart(request, outfit_id):
 # ---------- เช่าและชำระเงิน ----------
 @login_required
 def checkout_view(request):
+    # ... (โค้ดเดิม) ...
     cart_items, cart_subtotal_per_day = get_cart_items_and_total(request);
     if not cart_items: messages.warning(request, "ตะกร้าว่างเปล่า"); return redirect('outfits:outfit-list')
     if request.method == 'POST':
@@ -158,23 +170,22 @@ def checkout_view(request):
         else:
              messages.error(request, "กรุณากรอกข้อมูลให้ถูกต้อง")
              context = {'form': form, 'cart_items': cart_items, 'cart_subtotal_per_day': cart_subtotal_per_day}; return render(request, 'outfits/checkout.html', context)
-    else: # --- GET request ---
-        initial_data = {}
+    else: # GET
+        initial_data = {};
         if request.user.is_authenticated:
             initial_data = {'first_name': request.user.first_name, 'last_name': request.user.last_name, 'email': request.user.email}
-            # --- ดึงข้อมูลจาก Profile มาใส่ ---
             try:
-                profile = request.user.profile # หรือ UserProfile.objects.get(user=request.user)
+                profile = request.user.profile
                 if profile.phone: initial_data['phone'] = profile.phone
                 if profile.address: initial_data['address'] = profile.address
             except UserProfile.DoesNotExist: pass
-            except AttributeError: logger.warning(f"User {request.user.id} has no profile attribute.") ; pass
-            # --- จบส่วนดึงข้อมูล Profile ---
-        form = CheckoutForm(initial=initial_data) # ใส่ initial data ตอนสร้างฟอร์ม
+            except AttributeError: logger.warning(f"User {request.user.id} has no profile."); pass
+        form = CheckoutForm(initial=initial_data)
         context = {'form': form, 'cart_items': cart_items, 'cart_subtotal_per_day': cart_subtotal_per_day}; return render(request, 'outfits/checkout.html', context)
 
 @login_required
 def payment_process_view(request, order_id):
+    # ... (โค้ดเดิม) ...
     order = get_object_or_404(Order, id=order_id, user=request.user); form = None
     if order.status == 'pending':
         if request.method == 'POST':
@@ -192,6 +203,7 @@ def payment_process_view(request, order_id):
 
 @login_required
 def payment_result_view(request):
+    # ... (โค้ดเดิม) ...
     order_id = request.session.get('latest_order_id'); order = None
     if order_id:
         try: order = Order.objects.get(id=order_id, user=request.user)
@@ -207,6 +219,7 @@ def payment_result_view(request):
 # ---------- ประวัติ / รายละเอียด Order / Profile ----------
 @login_required
 def order_history_view(request):
+    # ... (โค้ดเดิม + print log) ...
     print(f"--- Running order_history_view for user: {request.user} ---")
     orders = Order.objects.filter(user=request.user).prefetch_related('items', 'items__outfit').order_by('-created_at')
     print(f"--- Orders found: {orders.count()} ---")
@@ -215,6 +228,7 @@ def order_history_view(request):
 
 @login_required
 def order_detail_view(request, order_id):
+    # ... (โค้ดเดิม + print log) ...
     print(f"--- Running order_detail_view for user: {request.user}, order_id: {order_id} ---")
     order = get_object_or_404(Order.objects.prefetch_related('items', 'items__outfit'), id=order_id, user=request.user)
     print(f"--- Order status: {order.status}, Items count: {order.items.count()} ---")
@@ -222,39 +236,51 @@ def order_detail_view(request, order_id):
     context = {'order': order}
     return render(request, 'outfits/order_detail.html', context)
 
-# --- แก้ไข User Profile View ---
 @login_required
 def user_profile_view(request):
-    user = request.user
-    # ใช้ get_or_create เพื่อความปลอดภัย
-    profile, created = UserProfile.objects.get_or_create(user=user)
+    # ... (โค้ดเดิม) ...
+    user = request.user; profile, created = UserProfile.objects.get_or_create(user=user)
+    if request.method == 'POST':
+        user_form = UserEditForm(request.POST, instance=user); profile_form = UserProfileForm(request.POST, instance=profile)
+        if user_form.is_valid() and profile_form.is_valid(): user_form.save(); profile_form.save(); messages.success(request, 'อัปเดตโปรไฟล์สำเร็จ!'); return redirect('outfits:user_profile')
+        else: messages.error(request, 'เกิดข้อผิดพลาด กรุณาตรวจสอบข้อมูล')
+    else: user_form = UserEditForm(instance=user); profile_form = UserProfileForm(instance=profile)
+    context = {'user_form': user_form, 'profile_form': profile_form }; return render(request, 'outfits/user_profile.html', context)
+
+
+# --- *** เพิ่ม View สำหรับหน้าแจ้งส่งคืน *** ---
+@login_required
+def initiate_return_view(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    # --- กำหนดสถานะที่อนุญาตให้แจ้งคืนได้ ---
+    allowed_statuses_for_return = ['rented', 'shipped'] # <--- ปรับแก้ตามต้องการ
+
+    if order.status not in allowed_statuses_for_return:
+        messages.error(request, f"ไม่สามารถแจ้งส่งคืนสำหรับคำสั่งเช่า #{order.id} ในสถานะปัจจุบัน ({order.get_status_display()}) ได้")
+        return redirect('outfits:order_detail', order_id=order.id)
+    # --- เพิ่ม: เช็คว่าเคยแจ้งคืนไปหรือยัง ---
+    if order.return_tracking_number or order.return_slip:
+         messages.warning(request, f"คุณได้แจ้งข้อมูลการส่งคืนสำหรับคำสั่งเช่า #{order.id} ไปแล้ว")
+         return redirect('outfits:order_detail', order_id=order.id)
 
     if request.method == 'POST':
-        # รับข้อมูลจาก POST request ผูกกับ instance ปัจจุบัน
-        user_form = UserEditForm(request.POST, instance=user)
-        profile_form = UserProfileForm(request.POST, instance=profile)
-
-        # ตรวจสอบความถูกต้องของทั้งสองฟอร์ม
-        if user_form.is_valid() and profile_form.is_valid():
-            user_form.save()
-            profile_form.save()
-            messages.success(request, 'อัปเดตข้อมูลโปรไฟล์สำเร็จ!')
-            return redirect('outfits:user_profile') # กลับมาหน้าเดิม
+        form = ReturnUploadForm(request.POST, request.FILES, instance=order)
+        if form.is_valid():
+            try:
+                return_info = form.save(commit=False)
+                return_info.status = 'return_shipped' # เปลี่ยนสถานะ
+                return_info.return_initiated_at = timezone.now() # บันทึกเวลา
+                return_info.save()
+                messages.success(request, f"บันทึกข้อมูลการส่งคืนสำหรับคำสั่งเช่า #{order.id} เรียบร้อยแล้ว")
+                return redirect('outfits:order_detail', order_id=order.id)
+            except Exception as e:
+                 logger.error(f"Error saving return info: {e}", exc_info=True)
+                 messages.error(request, "เกิดข้อผิดพลาดในการบันทึกข้อมูล")
         else:
-            # ถ้าฟอร์มไม่ถูกต้อง ให้แสดงข้อความ error
-            # ตัว form ที่ส่งกลับไปใน context จะมี error message อยู่แล้ว
-            messages.error(request, 'เกิดข้อผิดพลาด กรุณาตรวจสอบข้อมูลที่กรอก')
+             messages.error(request, "กรุณากรอกข้อมูลและแนบรูป/สลิปส่งคืนให้ถูกต้อง")
     else: # GET request
-        # สร้างฟอร์มโดยใส่ข้อมูลปัจจุบันลงไป
-        user_form = UserEditForm(instance=user)
-        profile_form = UserProfileForm(instance=profile)
+         form = ReturnUploadForm(instance=order) # แสดง tracking number เดิมถ้าเคยกรอก แต่ยังไม่ submit
 
-    context = {
-        'user_form': user_form,
-        'profile_form': profile_form,
-    }
-    # ใช้ template ชื่อ user_profile.html
-    return render(request, 'outfits/user_profile.html', context)
-
-# --- Admin Views ---
-# (ส่วน Admin ไม่ได้ใช้แล้ว)
+    context = { 'order': order, 'form': form, }
+    return render(request, 'outfits/initiate_return.html', context)
+# --- จบส่วนที่เพิ่ม ---
