@@ -2,52 +2,32 @@
 {% load static %}
 {% load humanize %}
 
-{% block title %}แจ้งส่งคืนสินค้า - Order #{{ order.id }}{% endblock %}
-
-{% block extra_head %}
-<style>
-    .return-container { max-width: 600px; margin: 30px auto; background-color: #fff; padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow); }
-    .return-form h3 { margin-top: 0; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; color: var(--primary-color); }
-    .form-field { margin-bottom: 15px; }
-    .form-field label { display: block; margin-bottom: 5px; font-weight: 500; }
-    .form-input, input[type="file"] { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
-    .form-errors { color: #dc3545; font-size: 0.9em; margin-top: 5px; list-style: none; padding-left: 0;}
-    input[type="file"]::file-selector-button { margin-right: 10px; border: none; background: var(--secondary-color); padding: 6px 10px; border-radius: 4px; color: #fff; cursor: pointer; transition: background .2s ease-in-out; }
-    input[type="file"]::file-selector-button:hover { background: #9ccc65; }
-    .order-summary-brief p { margin-bottom: 5px; font-size: 0.95em;}
-    /* --- CSS สำหรับ Alert (ควรย้ายไป styles.css) --- */
-    .alert { border-radius: var(--border-radius); padding: 10px 15px; margin-bottom: 15px; border-left-width: 5px; border-left-style: solid; } .alert-success { background-color: #d4edda; border-color: #28a745; color: #155724;} .alert-error { background-color: #f8d7da; border-color: #dc3545; color: #721c24;} .alert-info { background-color: #d1ecf1; border-color: #17a2b8; color: #0c5460;} .alert-warning { background-color: #fff3cd; border-color: #ffc107; color: #856404;}
-
-</style>
-{% endblock %}
+{% block title %}Initiate Return - Order #{{ order.id }}{% endblock %}
 
 {% block content %}
 <div class="return-container">
-    <h2 style="text-align: center; margin-bottom: 25px;">แจ้งส่งคืนสินค้า</h2>
-    <p style="text-align: center; margin-bottom: 20px;">สำหรับคำสั่งเช่าหมายเลข: <strong>#{{ order.id }}</strong></p>
+    <h2 style="text-align: center; margin-bottom: 25px;">Initiate Item Return</h2>
+    <p style="text-align: center; margin-bottom: 20px;">For Rental Order: <strong>#{{ order.id }}</strong></p>
 
-    {# แสดง Messages #}
     {% if messages %}
        <div class="messages-container" style="padding-bottom: 15px;">
             {% for message in messages %} <div class="alert alert-{{ message.tags }}">{{ message }}</div> {% endfor %}
         </div>
     {% endif %}
 
-    {# แสดงข้อมูล Order คร่าวๆ #}
-    <div class="order-summary-brief" style="margin-bottom: 20px; padding: 15px; background-color:#f8f9fa; border-radius: 8px;">
-        <p><strong>วันที่เริ่มเช่า:</strong> {{ order.rental_start_date|date:"d M Y" }} | <strong>วันที่คืน:</strong> {{ order.rental_end_date|date:"d M Y" }}</p>
-        <p><strong>รายการ:</strong>
+    <div class="order-summary-brief" style="margin-bottom: 25px; padding: 15px; background-color:#F9FAFB; border-radius: var(--border-radius); border: 1px solid var(--border-color);">
+        <p style="font-size: 0.95em;"><strong>Rental Period:</strong> {{ order.rental_start_date|date:"d M Y" }} to {{ order.rental_end_date|date:"d M Y" }}</p>
+        <p style="font-size: 0.95em;"><strong>Items:</strong>
             {% for item in order.items.all %}
-                {{ item.quantity }} x {{ item.outfit.name }}{% if not forloop.last %}, {% endif %}
+                {{ item.quantity }}x {{ item.outfit.name }}{% if not forloop.last %}, {% endif %}
             {% empty %}
                 -
             {% endfor %}
         </p>
     </div>
 
-    {# ฟอร์มแจ้งส่งคืน #}
     <form method="post" enctype="multipart/form-data" class="return-form">
-         <h3>กรอกข้อมูลการส่งคืน</h3>
+         <h3>Enter Return Details</h3>
         {% csrf_token %}
         {% for field in form %}
             <div class="form-field">
@@ -60,11 +40,11 @@
 
          {% if form.non_field_errors %} <div class="form-errors">{{ form.non_field_errors }}</div> {% endif %}
 
-        <button type="submit" class="button primary-button" style="width: 100%; padding: 12px; margin-top: 15px;">ยืนยันการแจ้งส่งคืน</button>
+        <button type="submit" class="button primary-button" style="width: 100%; padding: 12px; margin-top: 15px;">Confirm Return Submission</button>
     </form>
 
     <p style="text-align: center; margin-top: 15px;">
-         <a href="{% url 'outfits:order_detail' order.id %}" style="color: grey; font-size: 0.9em;">ยกเลิกและกลับไปดูรายละเอียด</a>
+         <a href="{% url 'outfits:order_detail' order.id %}" class="link-button" style="color: var(--text-light-color); font-size: 0.9em; text-decoration: none;">Cancel and return to order details</a>
      </p>
 
 </div>

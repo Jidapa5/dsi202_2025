@@ -1,26 +1,79 @@
 {% extends 'outfits/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Search Results for "{{ query }}"{% endblock %}
+
 {% block content %}
 <section class="search-results-section">
-    <header>
-        <h2>ผลการค้นหา "{{ query }}"</h2>
+    <header style="margin-bottom: 20px;">
+        {% if query %}
+            <h2>Search Results for "{{ query }}"</h2>
+        {% else %}
+             <h2>Search Outfits</h2>
+             <p>Please enter a search term in the form above.</p>
+        {% endif %}
     </header>
-    <div class="results-grid">
-        {% for result in results %}
+
+    {% if results %}
+    <div class="outfit-grid">
+        {% for outfit in results %}
         <article class="outfit-card">
             <div class="outfit-image">
-                <img src="{{ result.image.url }}" alt="{{ result.name }}" width="250">
+                 <a href="{% url 'outfits:outfit-detail' outfit.pk %}">
+                    {% if outfit.image %}
+                            <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}">
+                    {% else %}
+                         <div class="outfit-card-no-image">(No Image)</div>
+                    {% endif %}
+                 </a>
             </div>
-            <div class="outfit-info">
-                <h3>{{ result.name }}</h3>
-                <p class="description">{{ result.description|truncatechars:100 }}</p>
-                <div class="actions">
-                    <a href="{% url 'outfit-detail' result.pk %}" class="button primary-button">ดูรายละเอียด</a>
+             <div class="outfit-card-body">
+                <h3 class="outfit-card-title"><a href="{% url 'outfits:outfit-detail' outfit.pk %}">{{ outfit.name }}</a></h3>
+                 {% if outfit.category %}
+                 <p class="outfit-card-category">
+                    <a href="{% url 'outfits:outfits-by-category' outfit.category.slug %}">{{ outfit.category.name }}</a>
+                 </p>
+                {% endif %}
+                <p class="description" style="font-size: 0.9em; color: var(--text-light-color); margin-bottom: 10px;">{{ outfit.description|truncatechars:70 }}</p>
+                <p class="outfit-card-price">{{ outfit.price|floatformat:2|intcomma }} / day</p>
+                <div class="outfit-actions">
+                     <form action="{% url 'outfits:add_to_cart' outfit.id %}" method="post">
+                         {% csrf_token %}
+                         <input type="hidden" name="quantity" value="1">
+                         <button type="submit" class="button secondary-button small-button">Add to Cart</button>
+                    </form>
+                    <a href="{% url 'outfits:outfit-detail' outfit.pk %}" class="button primary-button small-button">Details</a>
                 </div>
             </div>
         </article>
-        {% empty %}
-        <p class="no-results">ไม่พบชุดที่ตรงกับคำค้นหา "{{ query }}"</p>
         {% endfor %}
     </div>
+     {% elif query %}
+        <div style="text-align: center; padding: 40px 0;">
+            <p>No outfits found matching your search for "{{ query }}".</p>
+            <p style="margin-top: 15px;"><a href="{% url 'outfits:outfit-list' %}" class="button secondary-button">View All Outfits</a></p>
+        </div>
+     {% endif %}
+
+    {% if is_paginated %}
+        <div class="pagination">
+             <span class="step-links">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if query %}&q={{ query }}{% endif %}">&laquo; First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">Previous</a>
+                {% endif %}
+
+                <span class="current-page">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                </span>
+
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}">Last &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
+    {% endif %}
 </section>
 {% endblock %}

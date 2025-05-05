@@ -2,53 +2,36 @@
 {% load humanize %}
 {% load static %}
 
-{% block title %}ประวัติการเช่า - MindVibe{% endblock %}
-
-{% block extra_head %}
-<style>
-    .order-history-table { width: 100%; border-collapse: collapse; margin-top: 15px; background-color: #fff; box-shadow: var(--shadow); border-radius: var(--border-radius); overflow: hidden; }
-    .order-history-table th, .order-history-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
-    .order-history-table th { background-color: #f8f9fa; font-weight: 500; }
-    .order-history-table td:nth-child(5), .order-history-table th:nth-child(5) { text-align: right; } /* Total Amount */
-    .order-history-table td:nth-child(6), .order-history-table th:nth-child(6) { text-align: center; } /* Status */
-    .order-history-table td:nth-child(7), .order-history-table th:nth-child(7) { text-align: center; } /* Action */
-    .status-badge { padding: 3px 8px; border-radius: 12px; color: white; font-size: 0.9em; display: inline-block; min-width: 100px; text-align: center;} /* Add min-width */
-    .status-pending, .status-waiting_for_approval { background-color: #ffc107; color: #333; }
-    .status-processing { background-color: #17a2b8; }
-    .status-shipped, .status-rented, .status-return_received { background-color: #007bff; }
-    .status-completed { background-color: #28a745; }
-    .status-cancelled, .status-failed { background-color: #dc3545; }
-</style>
-{% endblock %}
+{% block title %}Order History - MindVibe{% endblock %}
 
 {% block content %}
-  <h2 style="text-align:center; margin-bottom: 25px;">ประวัติการเช่าของคุณ</h2>
+  <h2 style="text-align:center; margin-bottom: 30px;">Your Order History</h2>
 
   {% if orders %}
-    <div style="overflow-x:auto;"> {# ทำให้ตาราง scroll แนวนอนได้บนจอเล็ก #}
-        <table class="order-history-table">
+    <div class="table-container">
+        <table class="data-table order-history-table">
           <thead>
-            <tr >
-              <th>เลขที่คำสั่งเช่า</th>
-              <th>วันที่สั่ง</th>
-              <th>วันที่เริ่มเช่า</th>
-              <th>วันที่คืน</th>
-              <th>ยอดรวม</th>
-              <th>สถานะ</th>
-              <th>ดูรายละเอียด</th>
+            <tr>
+              <th>Order ID</th>
+              <th>Date Placed</th>
+              <th>Rental Start</th>
+              <th>Rental End</th>
+              <th class="text-right">Total Amount</th>
+              <th class="text-center">Status</th>
+              <th class="text-center">Details</th>
             </tr>
           </thead>
           <tbody>
             {% for order in orders %}
               <tr>
-                <td>#{{ order.id }}</td>
-                <td>{{ order.created_at|date:"d/m/Y H:i" }}</td>
-                <td>{{ order.rental_start_date|date:"d/m/Y" }}</td>
-                <td>{{ order.rental_end_date|date:"d/m/Y" }}</td>
-                <td>{{ order.total_amount|floatformat:2|intcomma }} บาท</td>
-                <td><span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span></td>
-                <td>
-                  <a href="{% url 'outfits:order_detail' order.id %}" class="button secondary-button tiny-button">ดูรายละเอียด</a>
+                <td data-label="Order ID">#{{ order.id }}</td>
+                <td data-label="Date Placed">{{ order.created_at|date:"d M Y, H:i" }}</td>
+                <td data-label="Rental Start">{{ order.rental_start_date|date:"d M Y" }}</td>
+                <td data-label="Rental End">{{ order.rental_end_date|date:"d M Y" }}</td>
+                <td data-label="Total Amount" class="text-right text-monospace">{{ order.total_amount|floatformat:2|intcomma }}</td>
+                <td data-label="Status" class="text-center"><span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span></td>
+                <td data-label="Details" class="text-center">
+                  <a href="{% url 'outfits:order_detail' order.id %}" class="button secondary-button tiny-button">View Details</a>
                 </td>
               </tr>
             {% endfor %}
@@ -56,10 +39,10 @@
         </table>
     </div>
   {% else %}
-    <p style="margin-top: 20px; text-align:center;">คุณยังไม่มีประวัติการเช่า</p>
-    <p style="text-align:center; margin-top: 15px;">
-        <a href="{% url 'outfits:outfit-list' %}" class="button primary-button">เลือกดูชุด</a>
-    </p>
+    <div style="text-align: center; padding: 40px 0;">
+        <p style="margin-bottom: 20px; color: var(--text-light-color);">You haven't placed any orders yet.</p>
+        <a href="{% url 'outfits:outfit-list' %}" class="button primary-button">Browse Outfits</a>
+    </div>
   {% endif %}
 
 {% endblock %}

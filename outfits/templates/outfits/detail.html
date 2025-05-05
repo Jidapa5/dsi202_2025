@@ -1,78 +1,69 @@
 {% extends 'outfits/base.html' %}
 {% load humanize %}
-{% load static %} {# เพิ่ม load static ถ้ายังไม่มี #}
+{% load static %}
 
 {% block title %}{{ outfit.name }} - MindVibe{% endblock %}
 
 {% block content %}
-<article class="outfit-detail-container" style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px; margin-top: 20px;">
+<article class="outfit-detail-container">
     <div class="outfit-image">
         {% if outfit.image %}
-            <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius); box-shadow: var(--shadow);">
+            <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}">
         {% else %}
-            <div style="height: 300px; background-color: #eee; display: flex; align-items: center; justify-content: center; color: grey; border-radius: var(--border-radius);">(ไม่มีรูปภาพ)</div>
+            <div class="outfit-card-no-image" style="height: 400px;">(No Image Available)</div>
         {% endif %}
     </div>
     <div class="outfit-details">
         <h2>{{ outfit.name }}</h2>
         {% if outfit.category %}
-            <p style="font-size: 0.9em; color: grey; margin-bottom: 15px;">
-                หมวดหมู่: <a href="{% url 'outfits:outfits-by-category' outfit.category.slug %}">{{ outfit.category.name }}</a>
+            <p class="outfit-card-category" style="margin-bottom: 15px;">
+                Category: <a href="{% url 'outfits:outfits-by-category' outfit.category.slug %}">{{ outfit.category.name }}</a>
             </p>
         {% endif %}
 
-        <p class="description" style="margin-bottom: 15px;">{{ outfit.description }}</p>
-        <p class="price" style="font-size: 1.2em; font-weight: bold; color: var(--primary-color); margin-bottom: 10px;">
-            ราคาเช่า: <span class="price-value">{{ outfit.price|floatformat:2|intcomma }}</span> บาท/วัน
+        <p class="description">{{ outfit.description }}</p>
+        <p class="price">
+            Rental Price: <span class="price-value">{{ outfit.price|floatformat:2|intcomma }}</span> / day
         </p>
 
-         {# --- แสดงสถานะชุด (ถ้ามี) --- #}
          {% if current_status_text %}
-         <p style="margin-bottom: 20px;">สถานะปัจจุบัน:
-             <span style="font-weight: bold; color: {% if current_status_text == 'ว่าง' %}green{% else %}red{% endif %};">
+         <p style="margin-bottom: 20px;">Current Status:
+             <span style="font-weight: 600; color: {% if current_status_text == 'Available' %}var(--success-border){% else %}var(--error-border){% endif %};">
                  {{ current_status_text }}
              </span>
          </p>
          {% endif %}
 
 
-        {# --- ส่วน Add to Cart --- #}
         <div class="add-to-cart-action">
              {% if outfit.is_active %}
-                {# --- ตรวจสอบว่าอยู่ในตะกร้าหรือยัง --- #}
-                {% if outfit.id|stringformat:"s" in cart_outfit_ids %} {# แปลง ID เป็น string ก่อนเทียบ #}
-                     <p style="color: green; font-weight: bold;">✅ ชุดนี้อยู่ในตะกร้าแล้ว</p>
-                     <a href="{% url 'outfits:cart_detail' %}" class="button secondary-button small-button" style="margin-top:10px;">ไปที่ตะกร้า</a>
+                {% if outfit.id|stringformat:"s" in cart_outfit_ids %}
+                     <p style="color: var(--success-border); font-weight: 600;">✅ This item is already in your cart.</p>
+                     <a href="{% url 'outfits:cart_detail' %}" class="button secondary-button small-button" style="margin-top:10px;">Go to Cart</a>
                 {% else %}
-                    {# --- แสดงปุ่มเฉพาะเมื่อชุด 'ว่าง' เท่านั้น (ถ้าต้องการ) --- #}
-                    {% if current_status_text == 'ว่าง' %}
-                        {# --- แก้ไขฟอร์มให้ถูกต้อง --- #}
+                    {% if current_status_text == 'Available' %}
                         <form action="{% url 'outfits:add_to_cart' outfit.id %}" method="post">
                             {% csrf_token %}
-                            {# --- ไม่ต้องแสดง quantity input --- #}
-                            {# {{ add_to_cart_form.quantity.label_tag }} #}
-                            {# {{ add_to_cart_form.quantity }} #}
-                            <input type="hidden" name="quantity" value="1"> {# ส่ง 1 ไปเลย #}
-                            <button type="submit" class="button primary-button add-cart-button">🛒 เพิ่มลงตะกร้า</button>
+                            <input type="hidden" name="quantity" value="1">
+                            <button type="submit" class="button primary-button add-cart-button">Add to Cart</button>
                         </form>
                     {% else %}
-                        {# <p style="color: red;">(ชุดนี้ถูกเช่าอยู่ ไม่สามารถเพิ่มลงตะกร้าได้)</p> #}
-                         <button type="button" class="button primary-button" disabled>🛒 เพิ่มลงตะกร้า</button>
+                         <button type="button" class="button primary-button" disabled>Add to Cart</button>
+                         <p class="help-text" style="margin-top: 5px;">(Item is currently unavailable)</p>
                     {% endif %}
                 {% endif %}
              {% else %}
-                 <p style="color: red;">(ชุดนี้ไม่พร้อมให้เช่าในขณะนี้)</p>
+                 <p style="color: var(--error-border);">(This outfit is currently inactive)</p>
              {% endif %}
         </div>
 
     </div>
 </article>
 
-{# --- ส่วนแสดงสินค้าที่เกี่ยวข้อง (ถ้ามี) --- #}
 {% if related_outfits %}
-    <section class="related-outfits" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
-        <h3>ชุดที่เกี่ยวข้อง</h3>
-        <div class="outfit-grid"> {# ใช้ grid layout เดิม #}
+    <section class="related-outfits" style="margin-top: 50px; padding-top: 30px; border-top: 1px solid var(--border-color);">
+        <h3>Related Outfits</h3>
+        <div class="outfit-grid">
             {% for related_outfit in related_outfits %}
                 <article class="outfit-card">
                     <div class="outfit-image">
@@ -80,14 +71,16 @@
                         {% if related_outfit.image %}
                             <img src="{{ related_outfit.image.url }}" alt="{{ related_outfit.name }}">
                         {% else %}
-                            <div class="outfit-card-no-image" style="height: 150px; display: flex; align-items: center; justify-content: center; background-color: #f0f0f0; color: grey;">(ไม่มีรูปภาพ)</div>
+                            <div class="outfit-card-no-image" style="height: 200px;">(No Image)</div>
                         {% endif %}
                         </a>
                     </div>
                     <div class="outfit-card-body">
                         <h4 class="outfit-card-title"><a href="{% url 'outfits:outfit-detail' related_outfit.pk %}">{{ related_outfit.name }}</a></h4>
-                        <p class="outfit-card-price">{{ related_outfit.price|floatformat:2|intcomma }} บาท/วัน</p>
-                        {# อาจจะเพิ่มปุ่ม Add to cart ตรงนี้ด้วยก็ได้ #}
+                        <p class="outfit-card-price">{{ related_outfit.price|floatformat:2|intcomma }} / day</p>
+                        <div class="outfit-actions" style="margin-top: 10px;">
+                             <a href="{% url 'outfits:outfit-detail' related_outfit.pk %}" class="button primary-button small-button">View</a>
+                         </div>
                     </div>
                 </article>
             {% endfor %}

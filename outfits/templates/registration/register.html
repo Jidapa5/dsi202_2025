@@ -1,13 +1,12 @@
-{% extends 'outfits/base.html' %} {# สืบทอดจาก base #}
+{% extends 'outfits/base.html' %}
 {% load static %}
 
-{% block title %}สมัครสมาชิก - MindVibe{% endblock %} {# แก้ Title #}
+{% block title %}Sign Up - MindVibe{% endblock %}
 
 {% block content %}
-<div class="auth-container" style="max-width: 450px; margin: 40px auto; padding: 30px; background-color: #fff; border-radius: var(--border-radius); box-shadow: var(--shadow);">
-  <h2 style="text-align: center; margin-bottom: 25px; color: var(--primary-color);">สมัครสมาชิก</h2> {# แก้ Header #}
+<div class="auth-container">
+  <h2>Sign Up</h2>
 
-  {# --- แสดง Global Error ถ้ามี (เช่น email ซ้ำ จาก form clean) --- #}
   {% if form.non_field_errors %}
     <div class="alert alert-danger" role="alert" style="margin-bottom: 15px;">
       {% for error in form.non_field_errors %}
@@ -16,20 +15,18 @@
     </div>
   {% endif %}
 
-  {# --- ฟอร์ม Register --- #}
   <form method="post" action="{% url 'outfits:register' %}" class="auth-form">
     {% csrf_token %}
 
-    {# --- วน Loop แสดงทุก Field ในฟอร์ม (จาก CustomUserCreationForm) --- #}
     {% for field in form %}
-      <div class="form-field" style="margin-bottom: 15px;">
+      <div class="form-field">
         <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
-        {{ field }} {# Render field และ widget ของมัน #}
+        {{ field }}
         {% if field.help_text %}
-          <p class="help-text" style="font-size: 0.8em; color: grey; margin-top: 3px;">{{ field.help_text|safe }}</p>
+          <div class="help-text">{{ field.help_text|safe }}</div>
         {% endif %}
         {% if field.errors %}
-          <div class="form-errors" style="color: #dc3545; font-size: 0.9em; margin-top: 5px;">
+          <div class="form-errors">
             {% for error in field.errors %}
               <span>{{ error }}</span>
             {% endfor %}
@@ -38,30 +35,11 @@
       </div>
     {% endfor %}
 
-    <button type="submit" class="button primary-button" style="width: 100%; padding: 10px; margin-top: 10px;">สมัครสมาชิก</button> {# แก้ปุ่ม #}
+    <button type="submit" class="button primary-button" style="width: 100%; padding: 10px; margin-top: 10px;">Sign Up</button>
   </form>
 
-  {# --- ลิงก์ไปหน้า Login --- #}
   <p style="text-align: center; margin-top: 20px; font-size: 0.9em;">
-    มีบัญชีอยู่แล้ว? <a href="{% url 'login' %}" style="color: var(--primary-color);">เข้าสู่ระบบที่นี่</a> {# แก้ลิงก์ #}
+    Already have an account? <a href="{% url 'login' %}">Login here</a>
   </p>
 </div>
-
-{# --- เพิ่ม CSS เล็กน้อย (ควรย้ายไป styles.css) --- #}
-<style>
-    .auth-form input[type="text"],
-    .auth-form input[type="email"], /* เพิ่ม email */
-    .auth-form input[type="password"] {
-        width: 100%;
-        padding: 8px 10px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        font-size: 1rem;
-        margin-top: 5px;
-    }
-    .auth-form ul { list-style: none; padding-left: 15px; margin-top: 5px; font-size: 0.85em; color: grey;} /* Style help_text ที่เป็น list */
-     .auth-form label {
-        font-weight: 500;
-     }
-</style>
 {% endblock %}

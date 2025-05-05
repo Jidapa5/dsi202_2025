@@ -2,79 +2,77 @@
 {% load humanize %}
 {% load static %}
 
-{% block title %}ตะกร้าสินค้า - MindVibe{% endblock %}
+{% block title %}Shopping Cart - MindVibe{% endblock %}
 
 {% block content %}
-<div class="cart-container" style="max-width: 960px; margin: 20px auto; padding: 15px;">
-  <h1 style="text-align: center; margin-bottom: 25px; color: var(--primary-color);">🛒 ตะกร้าสินค้าของคุณ</h1>
+<div class="cart-container" style="max-width: 960px; margin: 20px auto; padding: 0 15px;">
+  <h1 style="text-align: center; margin-bottom: 30px;">Your Shopping Cart</h1> {# --- เอาไอคอน 🛒 ออกจากตรงนี้ --- #}
 
   {% if cart_items %}
-    <div class="cart-table-container" style="overflow-x: auto;">
-      <table class="cart-table" style="width: 100%; border-collapse: collapse; background-color: white; box-shadow: var(--shadow); border-radius: var(--border-radius); overflow: hidden;">
+    <div class="table-container">
+      <table class="data-table cart-table">
         <thead>
-          <tr style="border-bottom: 2px solid #eee; background-color: #f8f9fa;">
-            <th style="text-align: left; padding: 12px;">รูปภาพ</th>
-            <th style="text-align: left; padding: 12px;">ชื่อชุด</th>
-            <th style="text-align: right; padding: 12px;">ราคาต่อวัน</th>
-            <th style="text-align: center; padding: 12px;">จำนวน</th>
-            <th style="text-align: right; padding: 12px;">รวม (ต่อวัน)</th>
-            <th style="text-align: center; padding: 12px;">จัดการ</th>
+          <tr>
+            <th>Image</th>
+            <th>Outfit Name</th>
+            <th class="text-right">Price/Day</th>
+            <th class="text-center">Quantity</th>
+            <th class="text-right">Subtotal/Day</th>
+            <th class="text-center">Manage</th>
           </tr>
         </thead>
         <tbody>
           {% for item in cart_items %}
-          <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 10px;">
+          <tr>
+            <td data-label="Image">
               {% if item.outfit.image %}
               <a href="{% url 'outfits:outfit-detail' item.outfit.pk %}">
-                <img src="{{ item.outfit.image.url }}" alt="{{ item.outfit.name }}" style="height: 60px; width: auto; border-radius: 4px; object-fit: cover;">
+                <img src="{{ item.outfit.image.url }}" alt="{{ item.outfit.name }}">
               </a>
               {% else %}
-              <div style="height: 60px; width: 50px; background-color: #eee; display: flex; align-items: center; justify-content: center; font-size: 0.8em; color: grey; border-radius: 4px;">ไม่มีรูป</div>
+              <div style="height: 70px; width: 50px; background-color: #eee; display: flex; align-items: center; justify-content: center; font-size: 0.8em; color: grey; border-radius: 4px;">No Image</div>
               {% endif %}
             </td>
-            <td style="padding: 10px;">
-              <a href="{% url 'outfits:outfit-detail' item.outfit.pk %}" style="color: var(--primary-color); text-decoration: none;">
+            <td data-label="Outfit Name">
+              <a href="{% url 'outfits:outfit-detail' item.outfit.pk %}" style="color: var(--primary-color); font-weight: 500;">
                 {{ item.outfit.name }}
               </a>
               {% if item.outfit.category %}
-                <p style="font-size: 0.85em; color: grey; margin-top: 2px;">{{ item.outfit.category.name }}</p>
+                <p style="font-size: 0.8em; color: var(--text-light-color); margin-top: 2px;">{{ item.outfit.category.name }}</p>
               {% endif %}
             </td>
-            <td style="text-align: right; padding: 10px;">{{ item.price_per_day|floatformat:2|intcomma }}</td>
-            <td style="text-align: center; padding: 10px;">
-              {{ item.quantity }} {# แสดงจำนวน = 1 #}
-              {# --- ไม่มีฟอร์มอัปเดต --- #}
-            </td>
-            <td style="text-align: right; padding: 10px;">{{ item.item_subtotal|floatformat:2|intcomma }}</td>
-            <td style="text-align: center; padding: 10px;">
+            <td data-label="Price/Day" class="text-right text-monospace">{{ item.price_per_day|floatformat:2|intcomma }}</td>
+            <td data-label="Quantity" class="text-center">{{ item.quantity }}</td>
+            <td data-label="Subtotal/Day" class="text-right text-monospace">{{ item.item_subtotal|floatformat:2|intcomma }}</td>
+            <td data-label="Manage" class="text-center">
               <form method="post" action="{% url 'outfits:remove_from_cart' item.outfit.id %}">
                 {% csrf_token %}
-                <button type="submit" class="button alert-button tiny-button">ลบ</button>
+                <button type="submit" class="button alert-button tiny-button">Remove</button>
               </form>
             </td>
           </tr>
           {% endfor %}
         </tbody>
         <tfoot>
-          <tr style="background-color: #f8f9fa; font-weight: bold;">
-            <td colspan="4" style="text-align: right; padding: 12px;">ยอดรวม (ต่อวัน):</td>
-            <td colspan="2" style="text-align: right; padding: 12px; color: var(--primary-color); font-size: 1.1em;">{{ cart_subtotal_per_day|floatformat:2|intcomma }} บาท</td>
+          <tr>
+            <td colspan="4" class="text-right">Subtotal (Per Day):</td>
+            <td colspan="2" class="text-right text-monospace">{{ cart_subtotal_per_day|floatformat:2|intcomma }}</td>
           </tr>
         </tfoot>
       </table>
     </div>
 
-    <div class="cart-actions" style="margin-top: 25px; display: flex; justify-content: space-between; align-items: center;">
-      <a href="{% url 'outfits:outfit-list' %}" class="button secondary-button">&larr; เลือกชุดเพิ่มเติม</a>
-      <a href="{% url 'outfits:checkout' %}" class="button primary-button" style="font-size: 1.1em;">ดำเนินการต่อ &rarr;</a>
+    <div class="cart-actions" style="margin-top: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+      <a href="{% url 'outfits:outfit-list' %}" class="button secondary-button">&larr; Continue Shopping</a>
+      <a href="{% url 'outfits:checkout' %}" class="button primary-button" style="font-size: 1.05em;">Proceed to Checkout &rarr;</a>
     </div>
-    <p style="text-align: right; margin-top: 10px; font-size: 0.9em; color: grey;">*ราคาสุดท้ายจะคำนวณจากระยะเวลาเช่าในขั้นตอนถัดไป</p>
+    <p style="text-align: right; margin-top: 10px; font-size: 0.85em; color: var(--text-light-color);">*Final price calculated based on rental duration during checkout.</p>
 
   {% else %}
-    <div style="text-align: center; padding: 40px; background-color: white; border-radius: var(--border-radius); box-shadow: var(--shadow);">
-      <p style="font-size: 1.2em; color: grey; margin-bottom: 20px;">ตะกร้าสินค้าของคุณว่างเปล่า</p>
-      <a href="{% url 'outfits:outfit-list' %}" class="button primary-button">เริ่มเลือกชุดเลย!</a>
+    <div style="text-align: center; padding: 50px 20px; background-color: #F9FAFB; border-radius: var(--border-radius); border: 1px dashed var(--border-color);">
+      {# --- ลบประโยคนี้ออก --- #}
+      {# <p style="font-size: 1.1em; color: var(--text-light-color); margin-bottom: 25px;">Your shopping cart is empty.</p> #}
+      <a href="{% url 'outfits:outfit-list' %}" class="button primary-button">Start Shopping Now!</a>
     </div>
   {% endif %}
 </div>

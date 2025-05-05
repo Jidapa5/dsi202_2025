@@ -1,102 +1,88 @@
 {% extends 'outfits/base.html' %}
 {% load static %}
-{% load humanize %} {# เพิ่ม load humanize #}
+{% load humanize %}
 
-{% block title %}{{ title|default:"รายการชุด" }}{% endblock %} {# ใช้ title จาก context หรือค่า default #}
+{% block title %}{{ title|default:"Outfits" }}{% endblock %}
 
 {% block content %}
 <section class="outfit-list-section">
-    <header>
-        <h2>{{ title|default:"รายการชุดทั้งหมด" }}</h2> {# ใช้ title จาก context #}
+    <header style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <h2>{{ title|default:"All Outfits" }}</h2>
 
-        {# --- แก้ไข URL ในฟอร์มค้นหา --- #}
-        <form method="get" action="{% url 'outfits:outfit-search' %}" class="search-form">
-            <div class="search-input-group">
-                <input type="text" name="q" placeholder="ค้นหาชุด..." value="{{ query|default:'' }}"> {# แสดง query เดิมถ้ามี #}
-                <button type="submit" class="search-button">ค้นหา</button>
-            </div>
+        <form method="get" action="{% url 'outfits:outfit-search' %}" class="search-form" style="display: flex;">
+            <input type="text" name="q" placeholder="Search outfits..." value="{{ query|default:'' }}" style="min-width: 200px; border-radius: var(--border-radius) 0 0 var(--border-radius);">
+            <button type="submit" class="button primary-button" style="border-radius: 0 var(--border-radius) var(--border-radius) 0;">Search</button>
         </form>
     </header>
 
-    {# --- แสดง Title ของ Category ถ้าอยู่ในหน้า Category --- #}
     {% if category %}
-        <h3 style="margin-bottom: 20px;">หมวดหมู่: {{ category.name }}</h3>
+        <h3 style="margin-bottom: 20px; font-weight: 500;">Category: {{ category.name }}</h3>
     {% endif %}
 
     <div class="outfit-grid">
-        {% for outfit in outfits %} {# ใช้ outfits จาก context ที่ ListView ส่งมา #}
+        {% for outfit in outfits %}
         <article class="outfit-card">
             <div class="outfit-image">
-                {# --- ตรวจสอบรูปภาพ --- #}
                 {% if outfit.image %}
-                    <a href="{% url 'outfits:outfit-detail' outfit.pk %}"> {# ทำให้รูปคลิกได้ #}
-                        <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}" width="250">
+                    <a href="{% url 'outfits:outfit-detail' outfit.pk %}">
+                        <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}">
                     </a>
                 {% else %}
-                     <div class="outfit-card-no-image">(ไม่มีรูปภาพ)</div>
+                     <div class="outfit-card-no-image">(No Image)</div>
                 {% endif %}
             </div>
-            <div class="outfit-info">
-                {# --- แก้ไข URL และเพิ่ม Link ให้ชื่อ --- #}
-                <h3><a href="{% url 'outfits:outfit-detail' outfit.pk %}">{{ outfit.name }}</a></h3>
-
-                {# --- แสดงหมวดหมู่ (ถ้ามี) --- #}
+            <div class="outfit-card-body">
+                <h3 class="outfit-card-title"><a href="{% url 'outfits:outfit-detail' outfit.pk %}">{{ outfit.name }}</a></h3>
                 {% if outfit.category %}
-                 <p class="category" style="font-size: 0.9em; color: grey;">
+                 <p class="outfit-card-category">
                     <a href="{% url 'outfits:outfits-by-category' outfit.category.slug %}">{{ outfit.category.name }}</a>
                  </p>
                 {% endif %}
-
-                <p class="description">{{ outfit.description|truncatechars:80 }}</p> {# ลดจำนวนตัวอักษรลงเล็กน้อย #}
-                {# --- จัดรูปแบบราคา --- #}
-                <p class="price">ราคา: <span class="price-value">{{ outfit.price|floatformat:2|intcomma }}</span> บาท/วัน</p>
-
-                {# --- เปลี่ยนเป็นปุ่ม Add to Cart และ View Details --- #}
+                <p class="description" style="font-size: 0.9em; color: var(--text-light-color); margin-bottom: 10px;">{{ outfit.description|truncatechars:70 }}</p>
+                <p class="outfit-card-price">{{ outfit.price|floatformat:2|intcomma }} / day</p>
                 <div class="outfit-actions">
-                    {# --- ฟอร์ม Add to Cart --- #}
-                    <form action="{% url 'outfits:add_to_cart' outfit.id %}" method="post" style="display: inline-block; margin-right: 5px;">
+                    <form action="{% url 'outfits:add_to_cart' outfit.id %}" method="post">
                          {% csrf_token %}
-                         {# ส่ง quantity เป็น 1 โดยอัตโนมัติ #}
                          <input type="hidden" name="quantity" value="1">
-                         <button type="submit" class="button secondary-button small-button">เพิ่มลงตะกร้า</button>
+                         <button type="submit" class="button secondary-button small-button">Add to Cart</button>
                     </form>
-                    {# --- ปุ่มดูรายละเอียด (URL แก้ไขแล้ว) --- #}
-                    <a href="{% url 'outfits:outfit-detail' outfit.pk %}" class="button primary-button small-button">ดูรายละเอียด</a>
+                    <a href="{% url 'outfits:outfit-detail' outfit.pk %}" class="button primary-button small-button">Details</a>
                 </div>
-                
+            </div>
         </article>
         {% empty %}
-            {# --- ปรับปรุงข้อความ --- #}
-            {% if query %}
-                 <p>ไม่พบชุดที่ตรงกับการค้นหา "{{ query }}"</p>
-            {% elif category %}
-                 <p>ยังไม่มีชุดในหมวดหมู่ "{{ category.name }}"</p>
-            {% else %}
-                 <p>ยังไม่มีชุดในรายการ</p>
-            {% endif %}
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px 0;">
+                {% if query %}
+                     <p>No outfits found matching your search for "{{ query }}".</p>
+                {% elif category %}
+                     <p>No outfits found in the "{{ category.name }}" category yet.</p>
+                {% else %}
+                     <p>No outfits available at the moment.</p>
+                {% endif %}
+                 <p style="margin-top: 15px;"><a href="{% url 'outfits:outfit-list' %}" class="button secondary-button">View All Outfits</a></p>
+            </div>
         {% endfor %}
     </div>
 
-    {# --- ส่วน Pagination (ถ้า View ใช้) --- #}
     {% if is_paginated %}
-        <div class="pagination" style="margin-top: 20px; text-align: center;">
+        <div class="pagination">
             <span class="step-links">
                 {% if page_obj.has_previous %}
-                    <a href="?page=1{% if query %}&q={{ query }}{% endif %}">&laquo; แรกสุด</a>
-                    <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">ก่อนหน้า</a>
+                    <a href="?page=1{% if query %}&q={{ query }}{% endif %}">&laquo; First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">Previous</a>
                 {% endif %}
 
                 <span class="current-page">
-                    หน้า {{ page_obj.number }} จาก {{ page_obj.paginator.num_pages }}.
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
                 </span>
 
                 {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">ถัดไป</a>
-                    <a href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}">ท้ายสุด &raquo;</a>
+                    <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}">Last &raquo;</a>
                 {% endif %}
             </span>
         </div>
     {% endif %}
 
 </section>
-{% endblock %}                {# --- ลบส่วน rental-actions เก่า ---
+{% endblock %}

@@ -1,68 +1,47 @@
-{% extends 'outfits/base.html' %} {# สืบทอดจาก base #}
+{% extends 'outfits/base.html' %}
 {% load static %}
 
-{% block title %}เข้าสู่ระบบ - MindVibe{% endblock %} {# แก้ Title #}
+{% block title %}Login - MindVibe{% endblock %}
 
 {% block content %}
-<div class="auth-container" style="max-width: 450px; margin: 40px auto; padding: 30px; background-color: #fff; border-radius: var(--border-radius); box-shadow: var(--shadow);">
-  <h2 style="text-align: center; margin-bottom: 25px; color: var(--primary-color);">เข้าสู่ระบบ</h2> {# แก้ Header #}
+<div class="auth-container">
+  <h2>Login</h2>
 
-  {# --- แสดงข้อความ Error ถ้า Login ผิด --- #}
   {% if form.errors %}
-    <div class="alert alert-danger" role="alert" style="margin-bottom: 15px;">
-      ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาลองอีกครั้ง
+    <div class="alert alert-danger" role="alert">
+      Your username and password didn't match. Please try again.
     </div>
   {% endif %}
 
-  {# --- แสดงข้อความถ้าถูก Redirect มา --- #}
   {% if next %}
     {% if user.is_authenticated %}
-      <p class="alert alert-warning" style="font-size: 0.9em;">คุณไม่มีสิทธิ์เข้าถึงหน้านี้ กรุณาเข้าสู่ระบบด้วยบัญชีที่มีสิทธิ์</p>
+      <p class="alert alert-warning">Your account doesn't have access to this page. To proceed, please login with an account that has access.</p>
     {% else %}
-      <p class="alert alert-info" style="font-size: 0.9em;">กรุณาเข้าสู่ระบบเพื่อดูหน้านี้</p>
+      <p class="alert alert-info">Please login to see this page.</p>
     {% endif %}
   {% endif %}
 
-  {# --- ฟอร์ม Login --- #}
   <form method="post" action="{% url 'login' %}" class="auth-form">
     {% csrf_token %}
 
-    <div class="form-field" style="margin-bottom: 15px;">
-      <label for="{{ form.username.id_for_label }}">ชื่อผู้ใช้:</label>
-      {{ form.username }} {# ใช้ Widget จาก Django Auth #}
+    <div class="form-field">
+      <label for="{{ form.username.id_for_label }}">Username:</label>
+      {{ form.username }}
     </div>
 
-    <div class="form-field" style="margin-bottom: 20px;">
-      <label for="{{ form.password.id_for_label }}">รหัสผ่าน:</label>
-      {{ form.password }} {# ใช้ Widget จาก Django Auth #}
+    <div class="form-field">
+      <label for="{{ form.password.id_for_label }}">Password:</label>
+      {{ form.password }}
     </div>
 
-    {# --- Hidden field สำหรับ URL ที่จะไปต่อหลัง Login --- #}
     <input type="hidden" name="next" value="{{ next }}">
 
-    <button type="submit" class="button primary-button" style="width: 100%; padding: 10px;">เข้าสู่ระบบ</button> {# แก้ปุ่ม #}
+    <button type="submit" class="button primary-button" style="width: 100%; padding: 10px; margin-top: 10px;">Login</button>
   </form>
 
-  {# --- ลิงก์อื่นๆ --- #}
   <div style="text-align: center; margin-top: 20px; font-size: 0.9em;">
-    <p><a href="{% url 'password_reset' %}" style="color: var(--primary-color);">ลืมรหัสผ่าน?</a></p> {# แก้ลิงก์ #}
-    <p style="margin-top: 10px;">ยังไม่มีบัญชี? <a href="{% url 'outfits:register' %}" style="color: var(--primary-color);">สมัครสมาชิกที่นี่</a></p> {# แก้ลิงก์ #}
+    <p><a href="{% url 'password_reset' %}">Forgot password?</a></p>
+    <p style="margin-top: 10px;">Don't have an account? <a href="{% url 'outfits:register' %}">Sign up here</a></p>
   </div>
 </div>
-
-{# --- เพิ่ม CSS เล็กน้อย (ควรย้ายไป styles.css) --- #}
-<style>
-    .auth-form input[type="text"],
-    .auth-form input[type="password"] {
-        width: 100%;
-        padding: 8px 10px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        font-size: 1rem;
-        margin-top: 5px; /* Add some space below label */
-    }
-     .auth-form label {
-        font-weight: 500;
-     }
-</style>
 {% endblock %}

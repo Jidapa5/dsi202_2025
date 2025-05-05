@@ -1,70 +1,100 @@
 {% extends 'outfits/base.html' %}
 {% load humanize %}
 
-{% block title %}Checkout - ยืนยันข้อมูลการเช่า{% endblock %}
+{% block title %}Checkout - Confirm Rental Information{% endblock %}
 
 {% block extra_head %}
-{# ... (ส่วน style เดิม) ... #}
 <style>
-  /* ... (CSS เดิม) ... */
   .calculated-duration {
-      font-weight: bold;
+      font-weight: 500;
       color: var(--primary-color);
-      margin-left: 10px; /* Adjust spacing */
+      margin-left: 10px;
+      font-size: 0.9em;
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="checkout-container" style="max-width: 1100px; margin: 20px auto; padding: 15px;">
-  <h1 style="text-align: center; margin-bottom: 25px; color: var(--primary-color);">ยืนยันข้อมูลการเช่า</h1>
+<div class="checkout-container" style="max-width: 1100px; margin: 20px auto; padding: 0 15px;">
+  <h1 style="text-align: center; margin-bottom: 30px;">Confirm Rental Information</h1>
 
-  {# ... (ส่วนแสดง Messages และ Errors เดิม) ... #}
+   {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+          {% for error in form.non_field_errors %}
+              <p>{{ error }}</p>
+          {% endfor %}
+      </div>
+   {% endif %}
 
   <div class="checkout-grid">
     <div class="form-section">
-      <h2 style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">📋 ข้อมูลติดต่อและวันที่เช่า</h2>
+      <h2 style="margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; font-size: 1.5rem;">📋 Contact & Rental Dates</h2>
       <form method="post" class="checkout-form">
         {% csrf_token %}
 
         {% for field in form %}
         <div class="form-field">
             {{ field.label_tag }}
-            {{ field }} {# Render field และ widget ของมัน #}
+            {{ field }}
 
-            {# --- เพิ่ม span สำหรับแสดงจำนวนวัน ถ้าเป็น field วันที่ --- #}
             {% if field.name == 'rental_end_date' %}
                 <span id="rental-duration-display" class="calculated-duration"></span>
             {% endif %}
-            {# --- จบส่วนเพิ่ม span --- #}
 
             {% if field.errors %}
-                {# ... (แสดง errors เดิม) ... #}
+                <div class="form-errors">
+                {% for error in field.errors %}
+                    <span>{{ error }}</span>
+                {% endfor %}
+                </div>
             {% endif %}
             {% if field.help_text %}
-                 {# ... (แสดง help text เดิม) ... #}
+                 <p class="help-text">{{ field.help_text|safe }}</p>
             {% endif %}
         </div>
         {% endfor %}
 
         <button type="submit" class="button primary-button" style="width: 100%; padding: 12px; font-size: 1.1em; margin-top: 20px;">
-          ✅ ยืนยันและดำเนินการต่อ
+          ✅ Confirm and Proceed
         </button>
       </form>
     </div>
 
-    {# ... (ส่วน Summary Section เดิม) ... #}
+    <div class="summary-section">
+      <h3>Order Summary</h3>
+      <div class="summary-items">
+          {% for item in cart_items %}
+              <div class="summary-item">
+                  <span>{{ item.quantity }}x {{ item.outfit.name }}</span>
+                  <span class="text-monospace">{{ item.price_per_day|floatformat:2|intcomma }} / day</span>
+              </div>
+          {% endfor %}
+           <div class="summary-item" style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+                <span>Subtotal (Per Day)</span>
+                <span class="text-monospace">{{ cart_subtotal_per_day|floatformat:2|intcomma }}</span>
+            </div>
+             <div class="summary-item">
+                <span>Est. Shipping</span>
+                <span>Calculated later</span>
+            </div>
+      </div>
+      <div class="summary-total">
+          <span>Estimated Total</span>
+          <span>(Calculated after duration)</span>
+      </div>
+       <p style="font-size: 0.8em; color: var(--text-light-color); margin-top: 15px;">The final total, including shipping and rental duration, will be shown on the next step (payment page).</p>
+    </div>
 
   </div>
 </div>
 
 {% endblock %}
 
-{% block extra_js %} {# --- เพิ่ม Block นี้สำหรับ JavaScript ท้าย Body --- #}
+{% block extra_js %}
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-      const startDateInput = document.getElementById('{{ form.rental_start_date.id_for_label }}'); // ใช้ id จาก form
-      const endDateInput = document.getElementById('{{ form.rental_end_date.id_for_label }}'); // ใช้ id จาก form
+      const startDateInput = document.getElementById('{{ form.rental_start_date.id_for_label }}');
+      const endDateInput = document.getElementById('{{ form.rental_end_date.id_for_label }}');
       const durationDisplay = document.getElementById('rental-duration-display');
 
       function calculateDuration() {
@@ -72,30 +102,34 @@
           const endDateStr = endDateInput.value;
 
           if (startDateStr && endDateStr && durationDisplay) {
-              const startDate = new Date(startDateStr);
-              const endDate = new Date(endDateStr);
+              try {
+                  const startDate = new Date(startDateStr);
+                  const endDate = new Date(endDateStr);
 
-              // ตรวจสอบว่าเป็นวันที่ถูกต้อง และวันสิ้นสุดไม่ก่อนวันเริ่ม
-              if (!isNaN(startDate) && !isNaN(endDate) && endDate >= startDate) {
-                  // คำนวณความต่างเป็นมิลลิวินาที
-                  const diffTime = Math.abs(endDate - startDate);
-                  // แปลงเป็นวัน (1000 * 60 * 60 * 24) และบวก 1 เพราะนับรวมวันแรก
-                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                  durationDisplay.textContent = `(${diffDays} วัน)`;
-              } else {
-                  durationDisplay.textContent = ''; // ล้างข้อความถ้าวันที่ไม่ถูกต้อง
+                  if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate >= startDate) {
+                      const diffTime = endDate - startDate; // Difference in milliseconds
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Convert ms to days and add 1
+                      if (diffDays > 0) {
+                          durationDisplay.textContent = `(${diffDays} day${diffDays > 1 ? 's' : ''})`;
+                      } else {
+                           durationDisplay.textContent = '';
+                      }
+                  } else {
+                      durationDisplay.textContent = '';
+                  }
+              } catch (e) {
+                   console.error("Date calculation error:", e);
+                   durationDisplay.textContent = '';
               }
           } else if (durationDisplay) {
-               durationDisplay.textContent = ''; // ล้างข้อความถ้า input ว่าง
+               durationDisplay.textContent = '';
           }
       }
 
-      // คำนวณเมื่อมีการเปลี่ยนแปลงวันที่
       if (startDateInput) startDateInput.addEventListener('change', calculateDuration);
       if (endDateInput) endDateInput.addEventListener('change', calculateDuration);
 
-      // คำนวณครั้งแรกเมื่อโหลดหน้า (เผื่อมีค่า initial)
-      calculateDuration();
+      calculateDuration(); // Initial calculation on page load
   });
 </script>
 {% endblock %}

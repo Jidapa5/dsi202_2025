@@ -1,102 +1,165 @@
 # outfits/forms.py
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm # เพิ่ม UserChangeForm
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-# --- แก้ไข import model ให้ถูกต้อง ---
-from .models import Outfit, Order, UserProfile # เพิ่ม UserProfile
+from .models import Outfit, Order, UserProfile
 
-# --- CustomUserCreationForm (แก้ไข Indentation) ---
+# --- CustomUserCreationForm ---
 class CustomUserCreationForm(UserCreationForm):
-    email = forms.EmailField(required=True)
+    email = forms.EmailField(
+        required=True,
+        help_text='Required. Please enter a valid email address.',
+        widget=forms.EmailInput(attrs={'autocomplete': 'email'})
+    )
+    first_name = forms.CharField(max_length=150, required=False, label='First Name') # Add first/last name
+    last_name = forms.CharField(max_length=150, required=False, label='Last Name')
 
-    class Meta:
+    class Meta(UserCreationForm.Meta):
         model = User
-        fields = ("username", "email") # เอา password ออก ใช้ field ของ UserCreationForm
+        fields = ("username", "email", "first_name", "last_name") # Include names
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
-        # --- ตรวจสอบการย่อหน้าตรงนี้ ---
-        if email and User.objects.filter(email=email).exists():
-            raise ValidationError("อีเมลนี้มีผู้ใช้งานแล้ว")
-        # --- บรรทัด return ต้องย่อหน้าเท่ากับ if (อยู่ในระดับเดียวกัน) ---
+        if email and User.objects.filter(email__iexact=email).exists(): # Case-insensitive check
+            raise ValidationError("An account with this email already exists.")
         return email
 
-# --- OutfitForm ---
+# --- OutfitForm (For Admin or potential future use) ---
 class OutfitForm(forms.ModelForm):
     class Meta:
         model = Outfit
-        fields = '__all__' # หรือระบุ fields ที่ต้องการ
+        fields = '__all__' # Or specify fields needed
 
 # --- CheckoutForm ---
 class CheckoutForm(forms.Form):
-    first_name = forms.CharField(label='ชื่อจริง', max_length=100, widget=forms.TextInput(attrs={'class': 'form-input'}))
-    last_name = forms.CharField(label='นามสกุล', max_length=100, widget=forms.TextInput(attrs={'class': 'form-input'}))
-    email = forms.EmailField(label='อีเมล', widget=forms.EmailInput(attrs={'class': 'form-input'}))
-    phone = forms.CharField(label='เบอร์โทรศัพท์', max_length=20, widget=forms.TextInput(attrs={'class': 'form-input'}))
-    address = forms.CharField(label='ที่อยู่จัดส่ง', widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-textarea'}))
-    rental_start_date = forms.DateField(label='วันที่เริ่มเช่า', widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-input'}), initial=timezone.now().date() + timezone.timedelta(days=1))
-    rental_end_date = forms.DateField(label='วันที่คืน', widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-input'}), initial=timezone.now().date() + timezone.timedelta(days=4))
+    # Define widgets for consistent styling
+    text_input = forms.TextInput(attrs={'class': 'form-input'})
+    email_input = forms.EmailInput(attrs={'class': 'form-input', 'autocomplete': 'email'})
+    textarea = forms.Textarea(attrs={'rows': 3, 'class': 'form-textarea'})
+    date_input = forms.DateInput(attrs={'type': 'date', 'class': 'form-input'})
+
+    first_name = forms.CharField(label='First Name', max_length=100, widget=text_input)
+    last_name = forms.CharField(label='Last Name', max_length=100, widget=text_input)
+    email = forms.EmailField(label='Email', widget=email_input)
+    phone = forms.CharField(label='Phone Number', max_length=20, widget=forms.TextInput(attrs={'class': 'form-input', 'autocomplete': 'tel'}))
+    address = forms.CharField(label='Shipping Address', widget=textarea)
+    rental_start_date = forms.DateField(
+        label='Rental Start Date',
+        widget=date_input,
+        initial=lambda: timezone.now().date() + timezone.timedelta(days=1) # Default to tomorrow
+    )
+    rental_end_date = forms.DateField(
+        label='Return Date',
+        widget=date_input,
+        initial=lambda: timezone.now().date() + timezone.timedelta(days=4) # Default to 4 days later
+    )
 
     def clean_rental_start_date(self):
          start_date = self.cleaned_data.get('rental_start_date')
-         # if start_date and start_date < timezone.now().date(): raise ValidationError("วันที่เริ่มเช่าต้องไม่เป็นวันที่ผ่านมาแล้ว")
+         # Optional: Prevent choosing past dates, adjust as needed
+         # if start_date and start_date < timezone.now().date():
+         #    raise ValidationError("Start date cannot be in the past.")
          return start_date
+
     def clean(self):
-        cleaned_data = super().clean(); start_date = cleaned_data.get("rental_start_date"); end_date = cleaned_data.get("rental_end_date")
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get("rental_start_date")
+        end_date = cleaned_data.get("rental_end_date")
+
         if start_date and end_date:
-            if end_date < start_date: self.add_error('rental_end_date', "วันที่คืนต้องไม่ก่อนวันที่เริ่มเช่า")
+            if end_date < start_date:
+                self.add_error('rental_end_date', "Return date cannot be before the start date.")
+            # Optional: Add minimum/maximum rental duration validation
+            # min_duration = 1
+            # max_duration = 14
+            # duration = (end_date - start_date).days + 1
+            # if duration < min_duration:
+            #     self.add_error('rental_end_date', f"Minimum rental duration is {min_duration} day(s).")
+            # if duration > max_duration:
+            #     self.add_error('rental_end_date', f"Maximum rental duration is {max_duration} days.")
         return cleaned_data
 
-# --- CartAddItemForm ---
-class CartAddItemForm(forms.Form): pass # ฟอร์มเปล่า
+# --- CartAddItemForm (Kept simple, quantity handled in view/template) ---
+class CartAddItemForm(forms.Form):
+    pass # Currently just a placeholder, logic is in the view
 
 # --- PaymentSlipUploadForm ---
 class PaymentSlipUploadForm(forms.ModelForm):
-    payment_datetime = forms.DateTimeField(label='วันที่และเวลาโอนเงิน', widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-input'}), required=True)
-    payment_slip = forms.ImageField(label='แนบสลิปโอนเงิน', required=True, widget=forms.ClearableFileInput(attrs={'class': 'form-input'}))
-    class Meta: model = Order; fields = ['payment_datetime', 'payment_slip']
+    payment_datetime = forms.DateTimeField(
+        label='Date & Time of Transfer',
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-input'}),
+        required=True
+    )
+    payment_slip = forms.ImageField(
+        label='Attach Payment Slip',
+        required=True,
+        widget=forms.ClearableFileInput(attrs={'class': 'form-input'}) # Allows clearing/changing file
+    )
+    class Meta:
+        model = Order
+        fields = ['payment_datetime', 'payment_slip']
 
-# --- Form สำหรับแก้ไข User ---
+# --- UserEditForm (For profile page) ---
 class UserEditForm(forms.ModelForm):
-    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-input'}))
-    first_name = forms.CharField(required=False, label='ชื่อจริง', widget=forms.TextInput(attrs={'class': 'form-input'}))
-    last_name = forms.CharField(required=False, label='นามสกุล', widget=forms.TextInput(attrs={'class': 'form-input'}))
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={'class': 'form-input', 'autocomplete': 'email'})
+    )
+    first_name = forms.CharField(
+        required=False,
+        label='First Name',
+        widget=forms.TextInput(attrs={'class': 'form-input', 'autocomplete': 'given-name'})
+    )
+    last_name = forms.CharField(
+        required=False,
+        label='Last Name',
+        widget=forms.TextInput(attrs={'class': 'form-input', 'autocomplete': 'family-name'})
+    )
 
     class Meta:
         model = User
         fields = ('first_name', 'last_name', 'email')
 
     def clean_email(self):
+        """Prevent changing email to one that already exists for another user."""
         email = self.cleaned_data.get('email')
-        if email and User.objects.exclude(pk=self.instance.pk).filter(email=email).exists():
-            raise forms.ValidationError("อีเมลนี้มีผู้ใช้งานอื่นใช้อยู่แล้ว")
+        if email and User.objects.exclude(pk=self.instance.pk).filter(email__iexact=email).exists():
+            raise forms.ValidationError("This email address is already in use by another account.")
         return email
 
-# --- Form สำหรับแก้ไข User Profile ---
+# --- UserProfileForm (For profile page) ---
 class UserProfileForm(forms.ModelForm):
-    phone = forms.CharField(required=False, label='เบอร์โทรศัพท์', widget=forms.TextInput(attrs={'class': 'form-input'}))
-    address = forms.CharField(required=False, label='ที่อยู่ (สำหรับบันทึก)', widget=forms.Textarea(attrs={'rows': 4, 'class': 'form-textarea'}))
+    phone = forms.CharField(
+        required=False,
+        label='Phone Number',
+        widget=forms.TextInput(attrs={'class': 'form-input', 'autocomplete': 'tel'})
+    )
+    address = forms.CharField(
+        required=False,
+        label='Saved Address (for faster checkout)',
+        widget=forms.Textarea(attrs={'rows': 4, 'class': 'form-textarea', 'autocomplete': 'street-address'})
+    )
 
     class Meta:
         model = UserProfile
         fields = ('phone', 'address')
 
+# --- ReturnUploadForm (For initiating return) ---
 class ReturnUploadForm(forms.ModelForm):
     return_tracking_number = forms.CharField(
-        label='เลขพัสดุส่งคืน',
+        label='Return Tracking Number',
         max_length=100,
-        required=True, # บังคับกรอกเลขพัสดุ
+        required=True, # Make tracking number mandatory
         widget=forms.TextInput(attrs={'class': 'form-input'})
     )
     return_slip = forms.ImageField(
-        label='แนบรูปถ่ายพัสดุ/สลิปส่งคืน',
-        required=True, # บังคับแนบรูป
+        label='Attach Return Slip/Parcel Photo',
+        required=True, # Make photo mandatory
         widget=forms.ClearableFileInput(attrs={'class': 'form-input'})
     )
 
     class Meta:
-        model = Order # ผูกกับ Model Order
-        # ระบุ fields ที่จะให้ฟอร์มนี้จัดการ
+        model = Order # Linked to the Order model
         fields = ['return_tracking_number', 'return_slip']

@@ -2,60 +2,70 @@
 {% load humanize %}
 {% load static %}
 
-{% block title %}แจ้งชำระเงิน - คำสั่งเช่า #{{ order.id }}{% endblock %}
-
-{% block extra_head %}
-<style>
-  .payment-container { max-width: 700px; margin: 30px auto; background-color: white; padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow); display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-  .bank-details, .slip-upload { padding: 20px; border: 1px solid #eee; border-radius: 8px; }
-  .bank-details h3, .slip-upload h3 { margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-  .bank-details p { margin-bottom: 8px; }
-  .bank-details strong { display: inline-block; min-width: 100px; }
-  .total-amount { font-size: 1.3em; font-weight: bold; color: var(--primary-color); margin-bottom: 15px; }
-  .bank-qr img { max-width: 200px; height: auto; margin: 15px auto; display: block; border: 1px solid #eee; padding: 5px;}
-  .form-field { margin-bottom: 15px; }
-  .form-field label { display: block; margin-bottom: 5px; font-weight: 500; }
-  .form-input, .form-datetime { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
-  .form-errors { color: #dc3545; font-size: 0.9em; margin-top: 5px; }
-  input[type="file"]::file-selector-button { margin-right: 10px; border: none; background: var(--secondary-color); padding: 6px 10px; border-radius: 4px; color: #fff; cursor: pointer; transition: background .2s ease-in-out; }
-  input[type="file"]::file-selector-button:hover { background: #9ccc65; }
-
-  @media (max-width: 650px) { .payment-container { grid-template-columns: 1fr; } }
-</style>
-{% endblock extra_head %} {# --- แก้ไข: ใส่ชื่อ block ตอนปิด --- #}
+{% block title %}Submit Payment - Order #{{ order.id }}{% endblock %}
 
 {% block content %}
-<div style="max-width: 700px; margin: 20px auto;">
-    <h1 style="text-align: center; margin-bottom: 20px; color: var(--primary-color);">แจ้งการชำระเงิน</h1>
-    <p style="text-align: center; margin-bottom: 25px;">สำหรับคำสั่งเช่าหมายเลข: <strong>#{{ order.id }}</strong></p>
+<div style="max-width: 750px; margin: 20px auto;">
+    <h1 style="text-align: center; margin-bottom: 20px;">Submit Payment Proof</h1>
+    <p style="text-align: center; margin-bottom: 25px;">For Rental Order: <strong>#{{ order.id }}</strong></p>
 
-    {# --- แสดง Messages จาก Views (ถ้า base.html ไม่มี) --- #}
     {% if messages %}
        <div class="messages-container" style="padding-bottom: 15px;">
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}" role="alert" style="padding: 10px 15px; margin-bottom: 10px; border-radius: 8px; border-left: 5px solid;">
+                <div class="alert alert-{{ message.tags }}" role="alert">
                     {{ message }}
                 </div>
             {% endfor %}
         </div>
-        {# --- อาจจะเพิ่ม CSS สำหรับ Alert ที่นี่ หรือย้ายไปรวมที่ styles.css --- #}
-        <style>
-            /* Alert message styling (ตัวอย่าง ควรอยู่ใน styles.css) */
-            .alert { border-radius: var(--border-radius); padding: 10px 15px; margin-bottom: 15px; border-left-width: 5px; border-left-style: solid; }
-            .alert-success { background-color: #d4edda; border-color: #28a745; color: #155724;}
-            .alert-error, .alert-danger { background-color: #f8d7da; border-color: #dc3545; color: #721c24;}
-            .alert-info { background-color: #d1ecf1; border-color: #17a2b8; color: #0c5460;}
-            .alert-warning { background-color: #fff3cd; border-color: #ffc107; color: #856404;}
-        </style>
     {% endif %}
 </div>
 
+{% if order.status == 'pending' %}
 <div class="payment-container">
-
-  {# --- ส่วนแสดงข้อมูลบัญชี --- #}
   <div class="bank-details">
-    <h3>ข้อมูลการโอนเงิน</h3>
-    <p class="total-amount">ยอดที่ต้องชำระ: {{ order.total_amount|floatformat:2|intcomma }} บาท</p>
-    <p><strong>ธนาคาร:</strong> {{ bank_details.bank_name }}</p>
-    <p><strong>ชื่อบัญชี:</strong> {{ bank_details.account_name }}</p>
-    <p><strong>เลขที่บัญชี:</strong> {{ bank_details
+    <h3>Payment Details</h3>
+    <p class="total-amount">Amount Due: {{ order.total_amount|floatformat:2|intcomma }}</p>
+    <p><strong>Bank:</strong> {{ bank_details.bank_name }}</p>
+    <p><strong>Account Name:</strong> {{ bank_details.account_name }}</p>
+    <p><strong>Account Number:</strong> {{ bank_details.account_number }}</p>
+
+    {% if bank_details.qr_code_path %}
+    <div class="bank-qr">
+        <p style="text-align: center; font-size: 0.9em; color: var(--text-light-color);">Scan QR Code to Pay:</p>
+        <img src="{% static bank_details.qr_code_path %}" alt="Bank QR Code">
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="slip-upload">
+    <h3>Upload Payment Slip</h3>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="form-field">
+                {{ field.label_tag }}
+                {{ field }}
+                {% if field.errors %}<div class="form-errors">{{ field.errors }}</div>{% endif %}
+                {% if field.help_text %}<p class="help-text">{{ field.help_text|safe }}</p>{% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="button primary-button" style="width: 100%; padding: 10px; margin-top: 10px;">Confirm Payment Submission</button>
+    </form>
+  </div>
+</div>
+{% else %}
+<div style="text-align: center; padding: 30px; max-width: 600px; margin: 20px auto;" class="detail-card">
+    {% if order.status == 'waiting_for_approval' %}
+        <p>Your payment for Order #{{ order.id }} is currently awaiting approval.</p>
+    {% elif order.status == 'failed' %}
+         <p class="alert alert-danger">Payment for Order #{{ order.id }} was unsuccessful or the slip was incorrect.</p>
+         {% if order.admin_payment_note %}<p>Admin Note: {{ order.admin_payment_note }}</p>{% endif %}
+         <p style="margin-top: 15px;">Please contact support or try submitting payment again if applicable.</p>
+    {% else %}
+         <p>Payment for Order #{{ order.id }} cannot be submitted at this time (Status: {{ order.get_status_display }}).</p>
+    {% endif %}
+     <p style="margin-top: 20px;"><a href="{% url 'outfits:order_detail' order.id %}" class="button secondary-button">View Order Details</a></p>
+</div>
+{% endif %}
+
+{% endblock %}
