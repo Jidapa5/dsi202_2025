@@ -4,29 +4,13 @@
 {% block title %}Checkout - ยืนยันข้อมูลการเช่า{% endblock %}
 
 {% block extra_head %}
-{# เพิ่ม CSS/JS สำหรับ Date Picker (ถ้าต้องการ) #}
-{# <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"> #}
-{# <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script> #}
+{# ... (ส่วน style เดิม) ... #}
 <style>
-  .checkout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-  .form-section, .summary-section { background-color: white; padding: 25px; border-radius: var(--border-radius); box-shadow: var(--shadow); }
-  .form-field p { margin-bottom: 15px; }
-  .form-field label { display: block; margin-bottom: 5px; font-weight: 500; }
-  .form-input, .form-textarea, .form-date {
-    width: 100%;
-    padding: 8px 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 1rem;
-  }
-   .form-textarea { resize: vertical; min-height: 80px;}
-  .form-errors { color: #dc3545; font-size: 0.9em; margin-top: 5px;}
-  .summary-section ul { list-style: none; padding: 0; margin-bottom: 15px; }
-  .summary-section li { border-bottom: 1px dashed #eee; padding-bottom: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; }
-  .total-row { font-weight: bold; border-top: 1px solid #ccc; padding-top: 10px; margin-top: 15px; font-size: 1.1em;}
-
-  @media (max-width: 768px) {
-    .checkout-grid { grid-template-columns: 1fr; }
+  /* ... (CSS เดิม) ... */
+  .calculated-duration {
+      font-weight: bold;
+      color: var(--primary-color);
+      margin-left: 10px; /* Adjust spacing */
   }
 </style>
 {% endblock %}
@@ -35,23 +19,7 @@
 <div class="checkout-container" style="max-width: 1100px; margin: 20px auto; padding: 15px;">
   <h1 style="text-align: center; margin-bottom: 25px; color: var(--primary-color);">ยืนยันข้อมูลการเช่า</h1>
 
-  {# --- แสดง Global Form Errors (เช่น ชุดไม่ว่าง) --- #}
-  {% if form.non_field_errors %}
-      <div class="alert alert-danger" role="alert">
-          {% for error in form.non_field_errors %}
-              <p>{{ error }}</p>
-          {% endfor %}
-      </div>
-  {% endif %}
-  {# --- แสดง Messages จาก Views --- #}
-   {% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}" role="alert">
-            {{ message }}
-        </div>
-    {% endfor %}
-   {% endif %}
-
+  {# ... (ส่วนแสดง Messages และ Errors เดิม) ... #}
 
   <div class="checkout-grid">
     <div class="form-section">
@@ -59,25 +27,25 @@
       <form method="post" class="checkout-form">
         {% csrf_token %}
 
-        {# แสดง field errors แยกแต่ละ field #}
         {% for field in form %}
         <div class="form-field">
             {{ field.label_tag }}
             {{ field }} {# Render field และ widget ของมัน #}
+
+            {# --- เพิ่ม span สำหรับแสดงจำนวนวัน ถ้าเป็น field วันที่ --- #}
+            {% if field.name == 'rental_end_date' %}
+                <span id="rental-duration-display" class="calculated-duration"></span>
+            {% endif %}
+            {# --- จบส่วนเพิ่ม span --- #}
+
             {% if field.errors %}
-                <div class="form-errors">
-                    {% for error in field.errors %}
-                        <span>{{ error }}</span>
-                    {% endfor %}
-                </div>
+                {# ... (แสดง errors เดิม) ... #}
             {% endif %}
             {% if field.help_text %}
-                 <p class="help-text" style="font-size: 0.85em; color: grey; margin-top: 3px;">{{ field.help_text }}</p>
+                 {# ... (แสดง help text เดิม) ... #}
             {% endif %}
         </div>
         {% endfor %}
-
-        {# --- ลบส่วน Omise Token ออก --- #}
 
         <button type="submit" class="button primary-button" style="width: 100%; padding: 12px; font-size: 1.1em; margin-top: 20px;">
           ✅ ยืนยันและดำเนินการต่อ
@@ -85,41 +53,49 @@
       </form>
     </div>
 
-    <div class="summary-section">
-      <h2 style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">🧾 รายการเช่าของคุณ</h2>
-      {% if cart_items %}
-        <ul>
-          {% for item in cart_items %}
-          <li>
-            <span>{{ item.quantity }} x {{ item.outfit.name }}</span>
-            <span style="color: grey;">({{ item.price_per_day|floatformat:2|intcomma }}/วัน)</span>
-          </li>
-          {% endfor %}
-        </ul>
-        <div class="total-row">
-          <span>ยอดรวม (ต่อวัน)</span>
-          <span>{{ cart_subtotal_per_day|floatformat:2|intcomma }} บาท</span>
-        </div>
-        <p style="font-size: 0.9em; color: grey; margin-top: 15px;">
-          *ราคารวมค่าเช่าตามระยะเวลา และค่าจัดส่ง (ถ้ามี) จะแสดงในหน้าถัดไป
-        </p>
-      {% else %}
-        <p>ยังไม่มีสินค้าในตะกร้า</p>
-        <a href="{% url 'outfits:outfit-list' %}">← กลับไปเลือกชุด</a>
-      {% endif %}
-    </div>
+    {# ... (ส่วน Summary Section เดิม) ... #}
+
   </div>
 </div>
 
-{# --- (Optional) Initialize Date Picker --- #}
-{# <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    flatpickr("input[type='date']", { // ใช้ CSS selector เลือก input date
-      dateFormat: "Y-m-d", // รูปแบบวันที่ที่ Django คาดหวัง
-      minDate: "today"     // ไม่ให้เลือกวันในอดีต
-      // สามารถเพิ่ม option อื่นๆ ได้ เช่น disable วันที่เฉพาะเจาะจง
-    });
-  });
-</script> #}
+{% endblock %}
 
+{% block extra_js %} {# --- เพิ่ม Block นี้สำหรับ JavaScript ท้าย Body --- #}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      const startDateInput = document.getElementById('{{ form.rental_start_date.id_for_label }}'); // ใช้ id จาก form
+      const endDateInput = document.getElementById('{{ form.rental_end_date.id_for_label }}'); // ใช้ id จาก form
+      const durationDisplay = document.getElementById('rental-duration-display');
+
+      function calculateDuration() {
+          const startDateStr = startDateInput.value;
+          const endDateStr = endDateInput.value;
+
+          if (startDateStr && endDateStr && durationDisplay) {
+              const startDate = new Date(startDateStr);
+              const endDate = new Date(endDateStr);
+
+              // ตรวจสอบว่าเป็นวันที่ถูกต้อง และวันสิ้นสุดไม่ก่อนวันเริ่ม
+              if (!isNaN(startDate) && !isNaN(endDate) && endDate >= startDate) {
+                  // คำนวณความต่างเป็นมิลลิวินาที
+                  const diffTime = Math.abs(endDate - startDate);
+                  // แปลงเป็นวัน (1000 * 60 * 60 * 24) และบวก 1 เพราะนับรวมวันแรก
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                  durationDisplay.textContent = `(${diffDays} วัน)`;
+              } else {
+                  durationDisplay.textContent = ''; // ล้างข้อความถ้าวันที่ไม่ถูกต้อง
+              }
+          } else if (durationDisplay) {
+               durationDisplay.textContent = ''; // ล้างข้อความถ้า input ว่าง
+          }
+      }
+
+      // คำนวณเมื่อมีการเปลี่ยนแปลงวันที่
+      if (startDateInput) startDateInput.addEventListener('change', calculateDuration);
+      if (endDateInput) endDateInput.addEventListener('change', calculateDuration);
+
+      // คำนวณครั้งแรกเมื่อโหลดหน้า (เผื่อมีค่า initial)
+      calculateDuration();
+  });
+</script>
 {% endblock %}

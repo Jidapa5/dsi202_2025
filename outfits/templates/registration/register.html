@@ -1,48 +1,67 @@
-{% extends 'outfits/base.html' %}
+{% extends 'outfits/base.html' %} {# สืบทอดจาก base #}
+{% load static %}
 
-{% block title %}เข้าสู่ระบบ - MindVibe{% endblock %}
+{% block title %}สมัครสมาชิก - MindVibe{% endblock %} {# แก้ Title #}
 
 {% block content %}
-<div class="max-w-md mx-auto mt-10 bg-white p-8 rounded-2xl shadow-lg">
-  <h2 class="text-2xl font-bold text-center text-pink-600 mb-6">เข้าสู่ระบบ</h2>
+<div class="auth-container" style="max-width: 450px; margin: 40px auto; padding: 30px; background-color: #fff; border-radius: var(--border-radius); box-shadow: var(--shadow);">
+  <h2 style="text-align: center; margin-bottom: 25px; color: var(--primary-color);">สมัครสมาชิก</h2> {# แก้ Header #}
 
-  {% if form.errors %}
-    <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
-      <p>ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาลองอีกครั้ง</p>
+  {# --- แสดง Global Error ถ้ามี (เช่น email ซ้ำ จาก form clean) --- #}
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert" style="margin-bottom: 15px;">
+      {% for error in form.non_field_errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
     </div>
   {% endif %}
 
-  {% if next %}
-    {% if user.is_authenticated %}
-      <p class="text-sm text-yellow-600 mb-4">คุณไม่มีสิทธิ์เข้าถึงหน้านี้ กรุณาเข้าสู่ระบบด้วยบัญชีที่มีสิทธิ์</p>
-    {% else %}
-      <p class="text-sm text-gray-600 mb-4">กรุณาเข้าสู่ระบบเพื่อดูหน้านี้</p>
-    {% endif %}
-  {% endif %}
-
-  <form method="post" action="{% url 'login' %}" class="space-y-4">
+  {# --- ฟอร์ม Register --- #}
+  <form method="post" action="{% url 'outfits:register' %}" class="auth-form">
     {% csrf_token %}
-    
-    <div>
-      {{ form.username.label_tag }}
-      {{ form.username }}
-    </div>
 
-    <div>
-      {{ form.password.label_tag }}
-      {{ form.password }}
-    </div>
+    {# --- วน Loop แสดงทุก Field ในฟอร์ม (จาก CustomUserCreationForm) --- #}
+    {% for field in form %}
+      <div class="form-field" style="margin-bottom: 15px;">
+        <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
+        {{ field }} {# Render field และ widget ของมัน #}
+        {% if field.help_text %}
+          <p class="help-text" style="font-size: 0.8em; color: grey; margin-top: 3px;">{{ field.help_text|safe }}</p>
+        {% endif %}
+        {% if field.errors %}
+          <div class="form-errors" style="color: #dc3545; font-size: 0.9em; margin-top: 5px;">
+            {% for error in field.errors %}
+              <span>{{ error }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
 
-    <input type="hidden" name="next" value="{{ next }}">
-
-    <button type="submit" class="w-full bg-pink-600 text-white py-2 rounded hover:bg-pink-700 transition">
-      เข้าสู่ระบบ
-    </button>
+    <button type="submit" class="button primary-button" style="width: 100%; padding: 10px; margin-top: 10px;">สมัครสมาชิก</button> {# แก้ปุ่ม #}
   </form>
 
-  <div class="text-center mt-4 text-sm text-gray-600">
-    <p><a href="{% url 'password_reset' %}" class="text-pink-600 hover:underline">ลืมรหัสผ่าน?</a></p>
-    <p class="mt-2">ยังไม่มีบัญชี? <a href="{% url 'outfits:register' %}" class="text-pink-600 hover:underline">สมัครสมาชิกที่นี่</a></p>
-  </div>
+  {# --- ลิงก์ไปหน้า Login --- #}
+  <p style="text-align: center; margin-top: 20px; font-size: 0.9em;">
+    มีบัญชีอยู่แล้ว? <a href="{% url 'login' %}" style="color: var(--primary-color);">เข้าสู่ระบบที่นี่</a> {# แก้ลิงก์ #}
+  </p>
 </div>
+
+{# --- เพิ่ม CSS เล็กน้อย (ควรย้ายไป styles.css) --- #}
+<style>
+    .auth-form input[type="text"],
+    .auth-form input[type="email"], /* เพิ่ม email */
+    .auth-form input[type="password"] {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        font-size: 1rem;
+        margin-top: 5px;
+    }
+    .auth-form ul { list-style: none; padding-left: 15px; margin-top: 5px; font-size: 0.85em; color: grey;} /* Style help_text ที่เป็น list */
+     .auth-form label {
+        font-weight: 500;
+     }
+</style>
 {% endblock %}

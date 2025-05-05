@@ -1,6 +1,6 @@
 {% extends 'outfits/base.html' %}
-{% load humanize %} {# สำหรับจัดรูปแบบตัวเลขด้วย intcomma #}
-{% load static %} {# ถ้าต้องการใช้ static file อื่นๆ #}
+{% load humanize %}
+{% load static %}
 
 {% block title %}ตะกร้าสินค้า - MindVibe{% endblock %}
 
@@ -41,20 +41,13 @@
                 <p style="font-size: 0.85em; color: grey; margin-top: 2px;">{{ item.outfit.category.name }}</p>
               {% endif %}
             </td>
-            {# --- แสดงราคาต่อวัน --- #}
             <td style="text-align: right; padding: 10px;">{{ item.price_per_day|floatformat:2|intcomma }}</td>
             <td style="text-align: center; padding: 10px;">
-              {# --- ฟอร์มอัปเดตจำนวน ใช้ item.update_form --- #}
-              <form method="post" action="{% url 'outfits:update_cart_item' item.outfit.id %}" style="display: flex; justify-content: center; align-items: center; gap: 5px;">
-                {% csrf_token %}
-                {{ item.update_form.quantity }} {# ใช้ widget จาก forms.py #}
-                <button type="submit" class="button secondary-button tiny-button">อัปเดต</button>
-              </form>
+              {{ item.quantity }} {# แสดงจำนวน = 1 #}
+              {# --- ไม่มีฟอร์มอัปเดต --- #}
             </td>
-            {# --- แสดงราคารวมรายการ (ต่อวัน) --- #}
             <td style="text-align: right; padding: 10px;">{{ item.item_subtotal|floatformat:2|intcomma }}</td>
             <td style="text-align: center; padding: 10px;">
-              {# --- ฟอร์มลบสินค้า --- #}
               <form method="post" action="{% url 'outfits:remove_from_cart' item.outfit.id %}">
                 {% csrf_token %}
                 <button type="submit" class="button alert-button tiny-button">ลบ</button>
@@ -65,7 +58,6 @@
         </tbody>
         <tfoot>
           <tr style="background-color: #f8f9fa; font-weight: bold;">
-            {# --- แสดงยอดรวม (ต่อวัน) --- #}
             <td colspan="4" style="text-align: right; padding: 12px;">ยอดรวม (ต่อวัน):</td>
             <td colspan="2" style="text-align: right; padding: 12px; color: var(--primary-color); font-size: 1.1em;">{{ cart_subtotal_per_day|floatformat:2|intcomma }} บาท</td>
           </tr>
@@ -75,7 +67,6 @@
 
     <div class="cart-actions" style="margin-top: 25px; display: flex; justify-content: space-between; align-items: center;">
       <a href="{% url 'outfits:outfit-list' %}" class="button secondary-button">&larr; เลือกชุดเพิ่มเติม</a>
-      {# --- ปุ่มไปหน้า Checkout --- #}
       <a href="{% url 'outfits:checkout' %}" class="button primary-button" style="font-size: 1.1em;">ดำเนินการต่อ &rarr;</a>
     </div>
     <p style="text-align: right; margin-top: 10px; font-size: 0.9em; color: grey;">*ราคาสุดท้ายจะคำนวณจากระยะเวลาเช่าในขั้นตอนถัดไป</p>

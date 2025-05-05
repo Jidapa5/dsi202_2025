@@ -1,5 +1,6 @@
 {% extends 'outfits/base.html' %}
 {% load humanize %}
+{% load static %}
 
 {% block title %}แจ้งชำระเงิน - คำสั่งเช่า #{{ order.id }}{% endblock %}
 
@@ -14,33 +15,38 @@
   .bank-qr img { max-width: 200px; height: auto; margin: 15px auto; display: block; border: 1px solid #eee; padding: 5px;}
   .form-field { margin-bottom: 15px; }
   .form-field label { display: block; margin-bottom: 5px; font-weight: 500; }
-  .form-input, .form-datetime {
-    width: 100%;
-    padding: 8px 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 1rem;
-  }
+  .form-input, .form-datetime { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
   .form-errors { color: #dc3545; font-size: 0.9em; margin-top: 5px; }
+  input[type="file"]::file-selector-button { margin-right: 10px; border: none; background: var(--secondary-color); padding: 6px 10px; border-radius: 4px; color: #fff; cursor: pointer; transition: background .2s ease-in-out; }
+  input[type="file"]::file-selector-button:hover { background: #9ccc65; }
 
-  @media (max-width: 650px) {
-    .payment-container { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 650px) { .payment-container { grid-template-columns: 1fr; } }
 </style>
-{% endblock %}
+{% endblock extra_head %} {# --- แก้ไข: ใส่ชื่อ block ตอนปิด --- #}
 
 {% block content %}
 <div style="max-width: 700px; margin: 20px auto;">
     <h1 style="text-align: center; margin-bottom: 20px; color: var(--primary-color);">แจ้งการชำระเงิน</h1>
     <p style="text-align: center; margin-bottom: 25px;">สำหรับคำสั่งเช่าหมายเลข: <strong>#{{ order.id }}</strong></p>
 
-    {# แสดง Messages จาก Views (เช่น กรอกฟอร์มไม่ครบ) #}
+    {# --- แสดง Messages จาก Views (ถ้า base.html ไม่มี) --- #}
     {% if messages %}
-     {% for message in messages %}
-         <div class="alert alert-{{ message.tags }}" role="alert">
-             {{ message }}
-         </div>
-     {% endfor %}
+       <div class="messages-container" style="padding-bottom: 15px;">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}" role="alert" style="padding: 10px 15px; margin-bottom: 10px; border-radius: 8px; border-left: 5px solid;">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+        {# --- อาจจะเพิ่ม CSS สำหรับ Alert ที่นี่ หรือย้ายไปรวมที่ styles.css --- #}
+        <style>
+            /* Alert message styling (ตัวอย่าง ควรอยู่ใน styles.css) */
+            .alert { border-radius: var(--border-radius); padding: 10px 15px; margin-bottom: 15px; border-left-width: 5px; border-left-style: solid; }
+            .alert-success { background-color: #d4edda; border-color: #28a745; color: #155724;}
+            .alert-error, .alert-danger { background-color: #f8d7da; border-color: #dc3545; color: #721c24;}
+            .alert-info { background-color: #d1ecf1; border-color: #17a2b8; color: #0c5460;}
+            .alert-warning { background-color: #fff3cd; border-color: #ffc107; color: #856404;}
+        </style>
     {% endif %}
 </div>
 
@@ -52,48 +58,4 @@
     <p class="total-amount">ยอดที่ต้องชำระ: {{ order.total_amount|floatformat:2|intcomma }} บาท</p>
     <p><strong>ธนาคาร:</strong> {{ bank_details.bank_name }}</p>
     <p><strong>ชื่อบัญชี:</strong> {{ bank_details.account_name }}</p>
-    <p><strong>เลขที่บัญชี:</strong> {{ bank_details.account_number }}</p>
-
-    {% if bank_details.qr_code_url %}
-      <div class="bank-qr" style="margin-top: 20px; text-align: center;">
-        <p>หรือสแกน QR Code:</p>
-        <img src="{{ bank_details.qr_code_url }}" alt="QR Code สำหรับโอนเงิน">
-      </div>
-    {% endif %}
-     <p style="font-size: 0.9em; color: grey; margin-top: 20px;">*กรุณาโอนเงินให้ตรงกับยอดที่ต้องชำระ และเก็บสลิปไว้เพื่อใช้ในการแจ้งโอน</p>
-  </div>
-
-  {# --- ส่วนฟอร์มอัปโหลดสลิป --- #}
-  <div class="slip-upload">
-    <h3>แจ้งโอนเงินและแนบสลิป</h3>
-    {# --- สำคัญ: ต้องมี enctype="multipart/form-data" --- #}
-    <form method="post" enctype="multipart/form-data">
-      {% csrf_token %}
-
-      {# แสดง field errors แยกแต่ละ field #}
-      {% for field in form %}
-      <div class="form-field">
-          {{ field.label_tag }}
-          {{ field }} {# Render field และ widget ของมัน #}
-          {% if field.errors %}
-              <div class="form-errors">
-                  {% for error in field.errors %}
-                      <span>{{ error }}</span>
-                  {% endfor %}
-              </div>
-          {% endif %}
-          {% if field.help_text %}
-               <p class="help-text" style="font-size: 0.85em; color: grey; margin-top: 3px;">{{ field.help_text }}</p>
-          {% endif %}
-      </div>
-      {% endfor %}
-
-      <button type="submit" class="button primary-button" style="width: 100%; padding: 12px; margin-top: 15px;">แจ้งชำระเงิน</button>
-    </form>
-     <p style="text-align: center; margin-top: 15px;">
-        <a href="{% url 'outfits:order_detail' order.id %}" style="color: grey; font-size: 0.9em;">ยกเลิกและกลับไปดูรายละเอียด</a>
-     </p>
-  </div>
-
-</div>
-{% endblock %} 
+    <p><strong>เลขที่บัญชี:</strong> {{ bank_details
