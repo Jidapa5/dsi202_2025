@@ -1,0 +1,43 @@
+{% extends 'outfits/base.html' %}
+{% load i18n %}
+{% load account socialaccount %}
+
+{% block title %}{% trans "Sign In" %}{% endblock %}
+
+{% block content %}
+<div class="auth-container" style="max-width: 460px; margin: 50px auto; padding: 35px 40px; background-color: var(--card-background-color); border-radius: var(--border-radius); box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
+  <h2 style="text-align: center; margin-bottom: 30px; color: var(--primary-color);">{% trans "Sign In" %}</h2>
+
+  {% get_providers as socialaccount_providers %}
+
+  <form class="login" method="POST" action="{% url 'account_login' %}">
+    {% csrf_token %}
+    
+    {{ form.as_p }} {# แสดงฟอร์ม login มาตรฐาน #}
+
+    {% if redirect_field_value %}
+      <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+    {% endif %}
+    <button class="button primary-button" type="submit" style="width:100%; margin-top:15px;">{% trans "Sign In" %}</button>
+  </form>
+
+  {% if socialaccount_providers %}
+    <div style="text-align:center; margin-top: 25px; margin-bottom:15px; color: var(--text-light-color);">
+      <p>{% blocktrans with site.name as site_name %}Or sign in with one of these services:{% endblocktrans %}</p>
+    </div>
+    <div class="socialaccount_ballot">
+      <ul class="socialaccount_providers">
+        {% include "socialaccount/snippets/provider_list.html" with process="login" %}
+      </ul>
+    </div>
+    {% include "socialaccount/snippets/login_extra.html" %}
+  {% endif %}
+
+  <p style="text-align: center; margin-top: 20px;">
+    <a href="{% url 'account_reset_password' %}">{% trans "Forgot Password?" %}</a>
+  </p>
+  <p style="text-align: center; margin-top: 10px;">
+    {% blocktrans %}Don't have an account? <a href="{{ signup_url }}">Sign up</a>{% endblocktrans %}
+  </p>
+</div>
+{% endblock %}

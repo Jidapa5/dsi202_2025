@@ -484,3 +484,29 @@ input[type="file"]::file-selector-button:hover { background-color: var(--seconda
   .data-table td[data-label="Image"] { padding-left: 10px !important; }
   .cart-table img { height: 60px; width: 40px; }
 }
+
+
+.google-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: white;
+  color: #444;
+  font-weight: 500;
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+  text-decoration: none;
+}
+
+.google-login-button img {
+  width: 20px;
+  height: 20px;
+}
+
+.google-login-button:hover {
+  background: #f7f7f7;
+  border-color: #999;
+}

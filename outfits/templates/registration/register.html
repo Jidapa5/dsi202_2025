@@ -1,45 +1,16 @@
-{% extends 'outfits/base.html' %}
-{% load static %}
+{% extends "outfits/base.html" %}
+{% load crispy_forms_tags %}
 
-{% block title %}Sign Up - MindVibe{% endblock %}
+{% block title %}Sign Up{% endblock %}
 
 {% block content %}
-<div class="auth-container">
-  <h2>Sign Up</h2>
-
-  {% if form.non_field_errors %}
-    <div class="alert alert-danger" role="alert" style="margin-bottom: 15px;">
-      {% for error in form.non_field_errors %}
-        <p>{{ error }}</p>
-      {% endfor %}
-    </div>
-  {% endif %}
-
-  <form method="post" action="{% url 'outfits:register' %}" class="auth-form">
-    {% csrf_token %}
-
-    {% for field in form %}
-      <div class="form-field">
-        <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
-        {{ field }}
-        {% if field.help_text %}
-          <div class="help-text">{{ field.help_text|safe }}</div>
-        {% endif %}
-        {% if field.errors %}
-          <div class="form-errors">
-            {% for error in field.errors %}
-              <span>{{ error }}</span>
-            {% endfor %}
-          </div>
-        {% endif %}
-      </div>
-    {% endfor %}
-
-    <button type="submit" class="button primary-button" style="width: 100%; padding: 10px; margin-top: 10px;">Sign Up</button>
-  </form>
-
-  <p style="text-align: center; margin-top: 20px; font-size: 0.9em;">
-    Already have an account? <a href="{% url 'login' %}">Login here</a>
-  </p>
+<div class="form-container">
+    <h2>Sign Up</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="button primary-button">Register</button>
+    </form>
+    <p>Already have an account? <a href="{% url 'account_login' %}">Login here</a></p>
 </div>
 {% endblock %}
