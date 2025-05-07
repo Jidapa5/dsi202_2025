@@ -26,14 +26,14 @@
             Rental Price: <span class="price-value">{{ outfit.price|floatformat:2|intcomma }}</span> / day
         </p>
 
-         {% if current_status_text %}
-         <p style="margin-bottom: 20px;">Current Status:
-             <span style="font-weight: 600; color: {% if current_status_text == 'Available' %}var(--success-border){% else %}var(--error-border){% endif %};">
-                 {{ current_status_text }}
-             </span>
-         </p>
-         {% endif %}
-
+        {# Reverted: Display current status for today only #}
+        {% if current_status_text %}
+        <p style="margin-bottom: 20px; font-weight: 500;">Current Status (Today):
+            <span style="color: {% if current_status_text == 'Available' %}var(--success-border){% else %}var(--error-border){% endif %};">
+                {{ current_status_text }}
+            </span>
+        </p>
+        {% endif %}
 
         <div class="add-to-cart-action">
              {% if outfit.is_active %}
@@ -49,7 +49,7 @@
                         </form>
                     {% else %}
                          <button type="button" class="button primary-button" disabled>Add to Cart</button>
-                         <p class="help-text" style="margin-top: 5px;">(Item is currently unavailable)</p>
+                         <p class="help-text" style="margin-top: 5px;">(Item may be unavailable for today or currently rented)</p>
                     {% endif %}
                 {% endif %}
              {% else %}
@@ -87,5 +87,7 @@
         </div>
     </section>
 {% endif %}
+
+{# Removed the booked_periods_json script tag #}
 
 {% endblock %}

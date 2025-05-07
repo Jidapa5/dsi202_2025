@@ -6,32 +6,33 @@
 
 {% block content %}
 
-<section class="hero">
+<section class="hero sustainable-hero">
     <div class="hero-content">
-        <h1>Welcome to MindVibe!</h1>
-        <p class="tagline">Find and rent the perfect outfit in your style.</p>
-        <a href="{% url 'outfits:outfit-list' %}" class="button primary-button">Browse All Outfits</a>
+        <h1>Style with Purpose.</h1>
+        <p class="tagline">
+            Rent Smarter. Live Greener. Earth-loving fashion, for you.
+        </p>
+        <a href="{% url 'outfits:outfit-list' %}" class="button hero-cta-button">Discover Collection</a>
     </div>
 </section>
 
-{% comment %} === ย้าย Categories มาไว้ตรงนี้ === {% endcomment %}
+{% comment %} === Categories Section === {% endcomment %}
 {% if categories %}
 <section class="categories-section">
     <h2>Categories</h2>
     <div class="categories-grid">
         {% for category in categories %}
         <a href="{% url 'outfits:outfits-by-category' category.slug %}" class="category-card">
-            {# <span class="category-icon"> ICON HERE </span> #}
             <span class="category-card-name">{{ category.name }}</span>
         </a>
         {% endfor %}
     </div>
 </section>
 {% endif %}
-{% comment %} === สิ้นสุด Categories === {% endcomment %}
+{% comment %} === End Categories Section === {% endcomment %}
 
 
-{% comment %} === Featured Outfits อยู่ถัดไป === {% endcomment %}
+{% comment %} === Featured Outfits === {% endcomment %}
 {% if featured_outfits %}
     <section class="featured-outfits">
         <h2> Featured Outfits </h2>

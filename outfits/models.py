@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import date, timedelta
 from decimal import Decimal
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -25,7 +25,6 @@ class Category(models.Model):
             self.slug = slugify(self.name)
             original_slug = self.slug
             counter = 1
-            # Ensure slug uniqueness
             while Category.objects.filter(slug=self.slug).exists():
                 self.slug = f'{original_slug}-{counter}'
                 counter += 1
@@ -52,41 +51,37 @@ class Outfit(models.Model):
         return self.name
 
     def is_available(self, start_date, end_date, quantity=1):
-        """Checks if the outfit (assuming only 1 instance) is available for the given dates."""
+        """Checks if the outfit is available for the given dates."""
         if not start_date or not end_date or start_date > end_date or quantity < 1:
             return False
 
-        # Define statuses where the outfit is considered booked/unavailable
         relevant_statuses = ['pending', 'waiting_for_approval', 'processing', 'shipped', 'rented']
 
         # Find overlapping order items for this specific outfit
+        # This query looks for any OrderItem associated with this Outfit where its Order
+        # falls within the relevant statuses and the rental period overlaps with the requested dates.
         overlapping_items = self.order_items.filter(
             order__status__in=relevant_statuses,
-            order__rental_start_date__lte=end_date,
-            order__rental_end_date__gte=start_date
+            order__rental_start_date__lte=end_date, # Booking starts on or before the requested end_date
+            order__rental_end_date__gte=start_date  # Booking ends on or after the requested start_date
         )
+        
+        # If any such overlapping booking exists, the outfit is not available.
+        # This assumes each outfit instance is unique (stock of 1).
+        # If you had multiple units of the same outfit, you'd need to sum quantities.
+        return not overlapping_items.exists()
 
-        # Calculate the total quantity already booked during the overlapping period
-        # For now, assumes only 1 item available. If stock > 1, logic needs change.
-        booked_quantity = overlapping_items.aggregate(total_quantity=Sum('quantity'))['total_quantity'] or 0
-
-        # If any quantity is booked during this time, it's unavailable
-        if booked_quantity >= 1:
-            return False
-
-        # Otherwise, it's available
-        return True
+    # Removed get_upcoming_bookings(self) method
 
 # --- Order Model ---
 class Order(models.Model):
-    # Keep keys in English, change display values to English
     STATUS_CHOICES = (
         ('pending', 'Pending Payment'),
         ('waiting_for_approval', 'Awaiting Approval'),
         ('processing', 'Processing'),
         ('shipped', 'Shipped'),
         ('rented', 'Rented'),
-        ('return_shipped', 'Return Shipped'), # Customer reported return
+        ('return_shipped', 'Return Shipped'), 
         ('return_received', 'Return Received'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
@@ -105,7 +100,7 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='pending', verbose_name="Status")
-    paid = models.BooleanField(default=False, verbose_name="Payment Confirmed") # Consider if status alone is enough
+    paid = models.BooleanField(default=False, verbose_name="Payment Confirmed")
     payment_method = models.CharField(max_length=50, default='Bank Transfer', editable=False, verbose_name="Payment Method")
     payment_slip = models.ImageField(upload_to='payment_slips/%Y/%m/', blank=True, null=True, verbose_name="Payment Slip")
     payment_datetime = models.DateTimeField(blank=True, null=True, verbose_name="Payment Date/Time (Reported)")
@@ -119,7 +114,7 @@ class Order(models.Model):
         null=True,
         verbose_name="Return Slip/Photo"
     )
-    return_initiated_at = models.DateTimeField( # Date/time customer initiated the return
+    return_initiated_at = models.DateTimeField( 
         blank=True,
         null=True,
         verbose_name="Return Initiated At"
@@ -136,43 +131,37 @@ class Order(models.Model):
     @property
     def rental_duration_days(self):
         if self.rental_start_date and self.rental_end_date and self.rental_end_date >= self.rental_start_date:
-            # Calculate difference and add 1 to include both start and end dates
             return (self.rental_end_date - self.rental_start_date).days + 1
         return 0
 
     def calculate_items_total(self):
-        """Calculates the total cost of items based on duration and price per day."""
         total = Decimal('0.00')
         duration = self.rental_duration_days
-        if duration > 0 and self.pk: # Ensure order is saved and duration is valid
+        if duration > 0 and self.pk: 
             for item in self.items.all():
                 if item.price_per_day is not None:
                     total += item.price_per_day * duration * item.quantity
         return total
 
     def calculate_total_amount(self):
-        """Calculates the grand total including item costs and shipping."""
         items_total = self.calculate_items_total()
-        grand_total = items_total + self.shipping_cost # Add other fees if any
+        grand_total = items_total + self.shipping_cost 
         return grand_total
 
     def clean(self):
-        # Validate rental dates
         if self.rental_start_date and self.rental_end_date:
             if self.rental_end_date < self.rental_start_date:
                 raise ValidationError("Rental end date cannot be before the start date.")
-        # Ensure both dates are present if one is
         elif self.rental_start_date or self.rental_end_date:
              if not (self.rental_start_date and self.rental_end_date):
-                 # Allow saving intermediate state, maybe raise later if needed
                  pass
 
 # --- OrderItem Model ---
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE, verbose_name="Rental Order")
-    outfit = models.ForeignKey(Outfit, related_name='order_items', on_delete=models.PROTECT, verbose_name="Outfit") # PROTECT to prevent deleting Outfit if ordered
+    outfit = models.ForeignKey(Outfit, related_name='order_items', on_delete=models.PROTECT, verbose_name="Outfit") 
     price_per_day = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Price per Day (at time of order)", null=True, blank=True)
-    quantity = models.PositiveIntegerField(default=1, verbose_name="Quantity") # Usually 1 for rentals unless multiple identical items exist
+    quantity = models.PositiveIntegerField(default=1, verbose_name="Quantity") 
 
     class Meta:
         verbose_name = "Order Item"
@@ -183,25 +172,22 @@ class OrderItem(models.Model):
 
     @property
     def item_total_cost(self):
-        """Calculates the total cost for this specific item line."""
-        if hasattr(self, 'order') and self.order: # Ensure order relation exists
+        if hasattr(self, 'order') and self.order: 
              duration = self.order.rental_duration_days
              if self.price_per_day is not None and duration > 0:
                  return self.price_per_day * duration * self.quantity
         return Decimal('0.00')
 
     def save(self, *args, **kwargs):
-        # Set price_per_day from Outfit price when item is first created
         if not self.pk and self.outfit and self.price_per_day is None:
             self.price_per_day = self.outfit.price
         super().save(*args, **kwargs)
-
 
 # --- UserProfile Model ---
 class UserProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile', verbose_name="User")
     phone = models.CharField(max_length=20, blank=True, verbose_name="Phone Number")
-    address = models.TextField(blank=True, verbose_name="Saved Address") # For pre-filling forms
+    address = models.TextField(blank=True, verbose_name="Saved Address") 
 
     class Meta:
         verbose_name = "User Profile"
@@ -213,12 +199,9 @@ class UserProfile(models.Model):
 # --- Signal Receivers ---
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
-    """Ensure UserProfile is created or saved when User is."""
     if created:
         UserProfile.objects.create(user=instance)
-    # Use hasattr to avoid RelatedObjectDoesNotExist if profile was deleted manually
     if hasattr(instance, 'profile'):
         instance.profile.save()
     else:
-        # If profile doesn't exist for some reason, create it
         UserProfile.objects.create(user=instance)

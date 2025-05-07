@@ -5,8 +5,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MindVibe - Find and rent the perfect outfit for your style.">
-    <title>{% block title %}MindVibe{% endblock %}</title>
+    <meta name="description" content="MindVibe - Rent your style, love our planet. Discover sustainable fashion and unique outfits for every occasion.">
+    <title>{% block title %}MindVibe - Sustainable Style Rentals{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'outfits/styles.css' %}">
     {% block extra_head %}{% endblock %}
 </head>
@@ -45,7 +45,7 @@
         </div>
     </header>
 
-    {% if messages %}
+    {% if messages and not request.resolver_match.url_name == 'home' %}
         <div class="messages-container container" style="padding-top: 15px;">
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }}" role="alert">
@@ -62,6 +62,9 @@
 
     <footer class="site-footer">
         <div class="container">
+            <p class="sustainability-footer-note">
+                MindVibe: Rent consciously, live stylishly. Your choice for a sustainable wardrobe.
+            </p>
             <p>&copy; {% now "Y" %} MindVibe. All rights reserved.</p>
         </div>
     </footer>
