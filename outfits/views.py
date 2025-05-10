@@ -8,7 +8,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView, DetailView
 from django.contrib import messages
-from django.conf import settings
+from django.conf import settings # Make sure settings is imported
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Sum
 from django.http import JsonResponse, HttpResponse, HttpResponseBadRequest, Http404
@@ -17,6 +17,9 @@ from django.views.decorators.http import require_POST
 from django.db import transaction
 from django.contrib.auth import login, get_user_model
 from django.utils import timezone
+
+# Import the QR generation utility (moved into function to handle potential startup ImportError)
+# from .utils.qr import generate_promptpay_qr
 
 from .models import Outfit, Category, Order, OrderItem, UserProfile
 from .forms import (
@@ -210,15 +213,12 @@ def get_cart_items_and_total(request):
     # Update session only if changes were made (invalid items removed)
     session_changed = False
     if ids_to_remove:
-        # Create the final valid cart by filtering out removed IDs (less efficient than building new)
-        # valid_cart_session = {k: v for k, v in cart_session.items() if k not in ids_to_remove}
         session_changed = True
         logger.info(f"Removing invalid outfit IDs from cart: {ids_to_remove}")
 
-    # If the structure or content of the cart in session needs updating
     if session_changed or set(valid_cart_session.keys()) != set(cart_session.keys()):
-         request.session[settings.CART_SESSION_ID] = valid_cart_session
-         request.session.modified = True
+        request.session[settings.CART_SESSION_ID] = valid_cart_session
+        request.session.modified = True
 
     return cart_items_data, cart_subtotal_per_day
 
@@ -231,40 +231,37 @@ def cart_detail(request):
     }
     return render(request, 'outfits/cart_detail.html', context)
 
-@require_POST # Ensure only POST requests can add items
+@require_POST
 def add_to_cart(request, outfit_id):
     """Adds an outfit to the cart."""
     outfit = get_object_or_404(Outfit, id=outfit_id, is_active=True)
     cart = request.session.get(settings.CART_SESSION_ID, {})
-    outfit_key = str(outfit_id) # Session keys must be strings
+    outfit_key = str(outfit_id)
 
-    # Current logic: Only allow one of each outfit type in cart
     if outfit_key in cart:
         messages.warning(request, f"'{outfit.name}' is already in your cart.")
     else:
-        cart[outfit_key] = {'quantity': 1} # Add item with quantity 1
+        cart[outfit_key] = {'quantity': 1}
         request.session[settings.CART_SESSION_ID] = cart
-        request.session.modified = True # Mark session as modified
+        request.session.modified = True
         messages.success(request, f"Added '{outfit.name}' to your cart.")
 
-    # Redirect back to the previous page or cart
     redirect_url = request.POST.get('next', reverse('outfits:cart_detail'))
     return redirect(redirect_url)
 
-@require_POST # Ensure only POST requests can remove items
+@require_POST
 def remove_from_cart(request, outfit_id):
     """Removes an outfit from the cart."""
     cart = request.session.get(settings.CART_SESSION_ID, {})
     outfit_key = str(outfit_id)
 
     if outfit_key in cart:
-        # Try to get outfit name for message, handle if outfit deleted
         try:
             outfit_name = Outfit.objects.get(id=outfit_id).name
         except Outfit.DoesNotExist:
             outfit_name = f"Item ID {outfit_id}"
 
-        del cart[outfit_key] # Remove the item
+        del cart[outfit_key]
         request.session[settings.CART_SESSION_ID] = cart
         request.session.modified = True
         messages.success(request, f"Removed '{outfit_name}' from your cart.")
@@ -275,12 +272,11 @@ def remove_from_cart(request, outfit_id):
 
 # ---------- Checkout & Payment Views ----------
 
-@login_required # User must be logged in to checkout
+@login_required
 def checkout_view(request):
     """Handles the checkout process: collecting user info and creating an order."""
     cart_items, cart_subtotal_per_day = get_cart_items_and_total(request)
 
-    # If cart is empty, redirect
     if not cart_items:
         messages.warning(request, "Your cart is empty. Please add items before checking out.")
         return redirect('outfits:outfit-list')
@@ -291,7 +287,6 @@ def checkout_view(request):
             start_date = form.cleaned_data['rental_start_date']
             end_date = form.cleaned_data['rental_end_date']
 
-            # --- Availability Check ---
             unavailable_items = []
             for item_data in cart_items:
                 if not item_data['outfit'].is_available(start_date, end_date, quantity=item_data['quantity']):
@@ -299,15 +294,11 @@ def checkout_view(request):
 
             if unavailable_items:
                 messages.error(request, f"Sorry, the following items are not available for the selected dates: {', '.join(unavailable_items)}. Please adjust dates or remove items.")
-                # Re-render form with error
                 context = {'form': form, 'cart_items': cart_items, 'cart_subtotal_per_day': cart_subtotal_per_day}
                 return render(request, 'outfits/checkout.html', context)
-            # --- End Availability Check ---
 
             try:
-                # Use a transaction to ensure all steps succeed or fail together
                 with transaction.atomic():
-                    # Create the Order object
                     order = Order(
                         user=request.user,
                         first_name=form.cleaned_data['first_name'],
@@ -317,56 +308,43 @@ def checkout_view(request):
                         address=form.cleaned_data['address'],
                         rental_start_date=start_date,
                         rental_end_date=end_date,
-                        status='pending', # Initial status
-                        payment_method='Bank Transfer' # Default method
-                        # shipping_cost will be calculated or set later
+                        status='pending',
+                        payment_method='Bank Transfer'
                     )
-                    order.save() # Save order first to get an ID
+                    order.save()
 
-                    # Create OrderItem objects for each item in the cart
                     order_items_to_create = []
                     for item_data in cart_items:
                         order_items_to_create.append(OrderItem(
                             order=order,
                             outfit=item_data['outfit'],
-                            quantity=item_data['quantity'], # Should be 1 based on current cart logic
-                            price_per_day=item_data['outfit'].price # Store price at time of order
+                            quantity=item_data['quantity'],
+                            price_per_day=item_data['outfit'].price
                         ))
                     OrderItem.objects.bulk_create(order_items_to_create)
 
-                    # Recalculate and save the total amount on the order
-                    # Fetch order again to ensure related items are accessible for calculation
                     order_from_db = Order.objects.get(pk=order.pk)
                     order_from_db.total_amount = order_from_db.calculate_total_amount()
-                    # Add logic here to calculate/set shipping_cost if needed before final save
-                    # order_from_db.shipping_cost = calculate_shipping(order_from_db.address)
-                    order_from_db.total_amount += order_from_db.shipping_cost # Ensure total includes shipping
+                    order_from_db.total_amount += order_from_db.shipping_cost
                     order_from_db.save()
 
-                    # Clear the cart from session
                     del request.session[settings.CART_SESSION_ID]
                     request.session.modified = True
-                    # Store order ID for payment page redirect
                     request.session['latest_order_id'] = order_from_db.id
 
-                    # Redirect to payment processing page
                     return redirect('outfits:payment_process', order_id=order_from_db.id)
 
             except Exception as e:
-                 # Catch any unexpected errors during order creation
-                 logger.error(f"Error creating order for user {request.user.id}: {e}", exc_info=True)
-                 messages.error(request, f"An unexpected error occurred while creating your order. Please try again. Error: {e}")
-                 # Re-render form
-                 context = {'form': form, 'cart_items': cart_items, 'cart_subtotal_per_day': cart_subtotal_per_day}
-                 return render(request, 'outfits/checkout.html', context)
+                logger.error(f"Error creating order for user {request.user.id}: {e}", exc_info=True)
+                messages.error(request, f"An unexpected error occurred while creating your order. Please try again. Error: {e}")
+                context = {'form': form, 'cart_items': cart_items, 'cart_subtotal_per_day': cart_subtotal_per_day}
+                return render(request, 'outfits/checkout.html', context)
         else:
-             # Form validation failed
-             messages.error(request, "Please correct the errors in the form below.")
-             context = {'form': form, 'cart_items': cart_items, 'cart_subtotal_per_day': cart_subtotal_per_day}
-             return render(request, 'outfits/checkout.html', context)
+            messages.error(request, "Please correct the errors in the form below.")
+            context = {'form': form, 'cart_items': cart_items, 'cart_subtotal_per_day': cart_subtotal_per_day}
+            return render(request, 'outfits/checkout.html', context)
 
     else: # GET request
-        # Pre-fill form with user data if available
         initial_data = {}
         if request.user.is_authenticated:
             initial_data = {
@@ -374,18 +352,16 @@ def checkout_view(request):
                 'last_name': request.user.last_name,
                 'email': request.user.email,
             }
-            # Try to get phone/address from profile
             try:
-                profile = request.user.profile # Assumes related_name='profile'
+                profile = request.user.profile
                 if profile.phone: initial_data['phone'] = profile.phone
                 if profile.address: initial_data['address'] = profile.address
             except UserProfile.DoesNotExist:
                 logger.info(f"UserProfile not found for user {request.user.id}, creating one.")
-                UserProfile.objects.create(user=request.user) # Create profile if missing
+                UserProfile.objects.create(user=request.user)
             except AttributeError:
-                # Handle cases where user object might not have 'profile' yet
                 logger.warning(f"User {request.user.id} has no 'profile' attribute yet.")
-                UserProfile.objects.get_or_create(user=request.user) # Ensure profile exists
+                UserProfile.objects.get_or_create(user=request.user)
 
         form = CheckoutForm(initial=initial_data)
         context = {'form': form, 'cart_items': cart_items, 'cart_subtotal_per_day': cart_subtotal_per_day}
@@ -393,80 +369,110 @@ def checkout_view(request):
 
 @login_required
 def payment_process_view(request, order_id):
-    """Handles the submission of payment proof (slip upload)."""
-    order = get_object_or_404(Order, id=order_id, user=request.user)
-    form = None # Initialize form
+    """Handles the submission of payment proof (slip upload) and displays PromptPay QR."""
+    try:
+        from .utils.qr import generate_promptpay_qr
+    except ImportError:
+        generate_promptpay_qr = None # Set to None if import fails
+        logger.error("CRITICAL: Failed to import generate_promptpay_qr from .utils.qr at function level. Module may not be installed correctly.")
+        # It's better to show a generic error and not proceed with payment if QR util is missing
+        # messages.error(request, "QR generation utility is currently unavailable. Please contact support immediately.")
+        # For now, let the code proceed and handle generate_promptpay_qr being None
 
-    # Only allow submission if order is pending payment
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    form = None
+    promptpay_qr_base64 = None
+
     if order.status == 'pending':
         if request.method == 'POST':
             form = PaymentSlipUploadForm(request.POST, request.FILES, instance=order)
             if form.is_valid():
                 try:
-                    # Save form data (payment_datetime, payment_slip) to the order
                     updated_order = form.save(commit=False)
-                    updated_order.status = 'waiting_for_approval' # Update status
+                    updated_order.status = 'waiting_for_approval'
                     updated_order.save()
                     messages.success(request, f"Payment proof for Order #{order.id} submitted successfully. Awaiting approval.")
-                    return redirect('outfits:order_detail', order_id=order.id) # Redirect to order details
+                    return redirect('outfits:order_detail', order_id=order.id)
                 except Exception as e:
                     logger.error(f"Error saving payment slip for order {order.id}: {e}", exc_info=True)
                     messages.error(request, "An error occurred while saving your payment information.")
             else:
-                # Form is invalid
                 messages.error(request, "Please correct the errors and upload a valid slip.")
         else: # GET request
-            form = PaymentSlipUploadForm() # Show an empty form
+            form = PaymentSlipUploadForm()
 
-    # Handle cases where payment shouldn't be processed
+            # ---- START DEBUG ----
+            actual_promptpay_id = getattr(settings, 'PROMPTPAY_ID', 'PROMPTPAY_ID_NOT_FOUND_IN_SETTINGS')
+            print(f"DEBUG views.py: settings.PROMPTPAY_ID = '{actual_promptpay_id}' (type: {type(actual_promptpay_id)})")
+            logger.info(f"DEBUG views.py: settings.PROMPTPAY_ID = '{actual_promptpay_id}' (type: {type(actual_promptpay_id)})")
+            # ---- END DEBUG ----
+
+            if generate_promptpay_qr and actual_promptpay_id and actual_promptpay_id != 'PROMPTPAY_ID_NOT_FOUND_IN_SETTINGS' and order.total_amount > 0:
+                try:
+                    promptpay_qr_base64 = generate_promptpay_qr(
+                        recipient=str(actual_promptpay_id), # Ensure it's a string
+                        amount=float(order.total_amount)
+                    )
+                except ValueError as e: # This is for invalid ID format from pypromptpay
+                    logger.error(f"Invalid PromptPay ID ('{actual_promptpay_id}') format for QR generation for order {order.id}: {e}")
+                    messages.error(request, "Could not generate QR code: The configured PromptPay ID is invalid. Please contact support.")
+                except Exception as e: # Other errors from generate_promptpay_qr or pypromptpay
+                    logger.error(f"Unexpected error generating PromptPay QR for order {order.id} with ID '{actual_promptpay_id}': {e}", exc_info=True)
+                    messages.error(request, "An unexpected error occurred while generating the payment QR code. Please try again or contact support.")
+            elif not generate_promptpay_qr :
+                # This message is if the import itself failed
+                messages.error(request, "QR code generation system is currently unavailable. Please proceed with manual bank transfer details or contact support.")
+                logger.error(f"generate_promptpay_qr is None for order {order.id}. QR util import failed.")
+            elif not actual_promptpay_id or actual_promptpay_id == 'PROMPTPAY_ID_NOT_FOUND_IN_SETTINGS':
+                logger.warning(f"PROMPTPAY_ID not set or not found in settings. Cannot generate QR for order {order.id}.")
+                messages.warning(request, "PromptPay QR code generation is not configured (ID missing). Please contact support.")
+            # Consider adding an else for order.total_amount <= 0 if that's a case to handle for QR
+    
     elif order.status == 'waiting_for_approval':
         messages.info(request, f"Order #{order.id} is already awaiting payment approval.")
     elif order.status == 'failed':
         messages.error(request, f"Payment for Order #{order.id} failed previously. Reason: {order.admin_payment_note or 'Not specified'}. Please contact support if needed.")
-    else: # Other statuses (processing, shipped, etc.)
+    else:
         messages.info(request, f"Payment cannot be submitted for Order #{order.id} (Status: {order.get_status_display()}).")
 
-    # Prepare bank details for display
     bank_details = {
-        'account_name': settings.BANK_ACCOUNT_NAME,
-        'account_number': settings.BANK_ACCOUNT_NUMBER,
-        'bank_name': settings.BANK_NAME,
-        'qr_code_path': settings.BANK_QR_CODE_STATIC_PATH if settings.BANK_QR_CODE_STATIC_PATH else None
+    'account_name': settings.BANK_ACCOUNT_NAME,
+    'account_number': settings.PROMPTPAY_ID,  
+    'bank_name': settings.BANK_NAME,
+    'note': f"MindVibe Order #{order.id} — Please verify the account name before confirming payment."
+}
+
+    context = {
+        'order': order,
+        'form': form,
+        'bank_details': bank_details,
+        'promptpay_qr_base64': promptpay_qr_base64
     }
-    context = {'order': order, 'form': form, 'bank_details': bank_details}
     return render(request, 'outfits/payment_process.html', context)
 
 @login_required
 def payment_result_view(request):
     """Displays a generic payment result/status page, often after redirection."""
-    # Try to get the most recent order ID from session if available
     order_id = request.session.get('latest_order_id')
     order = None
     if order_id:
         try:
             order = Order.objects.get(id=order_id, user=request.user)
-            # Optional: Clear the session variable after use
-            # del request.session['latest_order_id']
-            # request.session.modified = True
         except Order.DoesNotExist:
             logger.warning(f"Order ID {order_id} from session not found for user {request.user.id}")
-            pass # Order not found or doesn't belong to user
+            pass 
 
-    # Display appropriate messages based on order status (or generic message if no order)
     if order:
-         # Add more specific messages based on status transitions if needed
-         if order.status == 'waiting_for_approval':
-             messages.info(request, f"Payment proof for Order #{order.id} submitted. Awaiting approval.")
-         elif order.status == 'processing':
-             messages.success(request, f"Payment for Order #{order.id} confirmed and is being processed.")
-         elif order.status == 'failed':
-              messages.error(request, f"Payment for Order #{order.id} failed or was rejected.")
-         # Add messages for other relevant statuses if needed
-         else:
-              messages.info(request, f"Current status for Order #{order.id}: {order.get_status_display()}.")
+        if order.status == 'waiting_for_approval':
+            messages.info(request, f"Payment proof for Order #{order.id} submitted. Awaiting approval.")
+        elif order.status == 'processing':
+            messages.success(request, f"Payment for Order #{order.id} confirmed and is being processed.")
+        elif order.status == 'failed':
+            messages.error(request, f"Payment for Order #{order.id} failed or was rejected.")
+        else:
+            messages.info(request, f"Current status for Order #{order.id}: {order.get_status_display()}.")
     else:
-        # Generic message if no specific order context
-        messages.info(request, "Welcome to MindVibe!") # Or redirect to history
+        messages.info(request, "Welcome to MindVibe!") # Or a generic message like "No recent order found."
 
     return render(request, 'outfits/payment_result.html', {'order': order})
 
@@ -476,17 +482,17 @@ def payment_result_view(request):
 def order_history_view(request):
     """Displays the user's past and current orders."""
     orders = Order.objects.filter(user=request.user).prefetch_related(
-        'items', 'items__outfit' # Optimize query by prefetching related items and outfits
-    ).order_by('-created_at') # Show newest orders first
+        'items', 'items__outfit'
+    ).order_by('-created_at')
     return render(request, 'outfits/order_history.html', {'orders': orders})
 
 @login_required
 def order_detail_view(request, order_id):
     """Displays details for a specific order belonging to the user."""
     order = get_object_or_404(
-        Order.objects.prefetch_related('items', 'items__outfit'), # Optimize query
+        Order.objects.prefetch_related('items', 'items__outfit'),
         id=order_id,
-        user=request.user # Ensure user can only see their own orders
+        user=request.user
     )
     context = {'order': order}
     return render(request, 'outfits/order_detail.html', context)
@@ -497,13 +503,11 @@ def order_detail_view(request, order_id):
 def user_profile_view(request):
     """Allows users to view and edit their profile information."""
     user = request.user
-    # Get or create the profile associated with the user
     profile, created = UserProfile.objects.get_or_create(user=user)
     if created:
         logger.info(f"Created UserProfile for user {user.id}")
 
     if request.method == 'POST':
-        # Populate forms with POST data and existing instances
         user_form = UserEditForm(request.POST, instance=user)
         profile_form = UserProfileForm(request.POST, instance=profile)
 
@@ -511,11 +515,10 @@ def user_profile_view(request):
             user_form.save()
             profile_form.save()
             messages.success(request, 'Profile updated successfully!')
-            return redirect('outfits:user_profile') # Redirect back to profile page
+            return redirect('outfits:user_profile')
         else:
             messages.error(request, 'Please correct the errors below.')
     else: # GET request
-        # Populate forms with existing instances
         user_form = UserEditForm(instance=user)
         profile_form = UserProfileForm(instance=profile)
 
@@ -531,37 +534,33 @@ def initiate_return_view(request, order_id):
     """Handles the submission of return information (tracking, slip)."""
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    # Define statuses where return is allowed
-    allowed_statuses_for_return = ['rented', 'shipped'] # Adjust as needed
+    allowed_statuses_for_return = ['rented', 'shipped']
 
-    # Check if return is allowed based on current status
     if order.status not in allowed_statuses_for_return:
         messages.error(request, f"Cannot initiate return for Order #{order.id} with status '{order.get_status_display()}'.")
         return redirect('outfits:order_detail', order_id=order.id)
 
-    # Check if return info has already been submitted
     if order.return_tracking_number or order.return_slip:
-         messages.warning(request, f"Return information for Order #{order.id} has already been submitted.")
-         return redirect('outfits:order_detail', order_id=order.id)
+        messages.warning(request, f"Return information for Order #{order.id} has already been submitted.")
+        return redirect('outfits:order_detail', order_id=order.id)
 
     if request.method == 'POST':
         form = ReturnUploadForm(request.POST, request.FILES, instance=order)
         if form.is_valid():
             try:
                 return_info = form.save(commit=False)
-                return_info.status = 'return_shipped' # Update order status
-                return_info.return_initiated_at = timezone.now() # Record submission time
+                return_info.status = 'return_shipped'
+                return_info.return_initiated_at = timezone.now()
                 return_info.save()
                 messages.success(request, f"Return information for Order #{order.id} submitted successfully.")
                 return redirect('outfits:order_detail', order_id=order.id)
             except Exception as e:
-                 logger.error(f"Error saving return info for order {order.id}: {e}", exc_info=True)
-                 messages.error(request, "An error occurred while saving return information.")
+                logger.error(f"Error saving return info for order {order.id}: {e}", exc_info=True)
+                messages.error(request, "An error occurred while saving return information.")
         else:
-             messages.error(request, "Please correct the errors and provide valid return details.")
+            messages.error(request, "Please correct the errors and provide valid return details.")
     else: # GET request
-         # Show empty form (or potentially pre-fill tracking if saved partially before?)
-         form = ReturnUploadForm(instance=order)
+        form = ReturnUploadForm(instance=order)
 
     context = { 'order': order, 'form': form, }
     return render(request, 'outfits/initiate_return.html', context)

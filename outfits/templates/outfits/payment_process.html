@@ -10,39 +10,52 @@
     <p style="text-align: center; margin-bottom: 25px;">For Rental Order: <strong>#{{ order.id }}</strong></p>
 
     {% if messages %}
-       <div class="messages-container" style="padding-bottom: 15px;">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}" role="alert">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
+    <div class="messages-container" style="padding-bottom: 15px;">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
     {% endif %}
 </div>
 
 {% if order.status == 'pending' %}
-<div class="payment-container">
-  <div class="bank-details">
+<div class="payment-container" style="display: flex; flex-wrap: wrap; gap: 30px; justify-content: space-between;">
+  <div class="bank-details" style="flex: 1; min-width: 320px;">
     <h3>Payment Details</h3>
-    <p class="total-amount">Amount Due: {{ order.total_amount|floatformat:2|intcomma }}</p>
-    <p><strong>Bank:</strong> {{ bank_details.bank_name }}</p>
-    <p><strong>Account Name:</strong> {{ bank_details.account_name }}</p>
-    <p><strong>Account Number:</strong> {{ bank_details.account_number }}</p>
+    <p class="total-amount" style="font-weight: 500; color: #a07f8a;">Amount Due: {{ order.total_amount|floatformat:2|intcomma }} THB</p>
 
-    {% if bank_details.qr_code_path %}
-    <div class="bank-qr">
-        <p style="text-align: center; font-size: 0.9em; color: var(--text-light-color);">Scan QR Code to Pay:</p>
-        <img src="{% static bank_details.qr_code_path %}" alt="Bank QR Code">
+    {% if promptpay_qr_base64 %}
+    <div class="promptpay-section" style="display: flex; flex-direction: column; align-items: center; text-align: center; margin: 20px 0;">
+      <h4 style="font-weight: 600; margin-bottom: 10px; color: #444;">Pay via PromptPay</h4>
+      <img src="data:image/png;base64,{{ promptpay_qr_base64 }}" 
+           alt="PromptPay QR Code" 
+           style="width: 220px; height: 220px; border: 2px solid #e3e3e3; border-radius: 12px; background-color: #fff; padding: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+      <p style="font-size: 0.95rem; color: #555; margin-top: 10px;">
+   <strong>PromptPay:</strong> {{ bank_details.account_number }}
+</p>
+<p style="font-size: 0.95rem; color: #555;">
+   <strong>Account:</strong> {{ bank_details.account_name }}
+</p>
+<p style="font-size: 0.9rem; color: #888; margin-top: 10px;">
+   <em>{{ bank_details.note }}</em>
+</p>
+    </div>
+    {% else %}
+    <div style="text-align: center; margin-top: 15px; padding: 10px; border: 1px dashed var(--error-border); border-radius: var(--border-radius);">
+        <p style="color: var(--error-color); font-weight: 500;">Payment QR code is currently unavailable.</p>
+        <p style="font-size: 0.9em; margin-top: 5px;">Please contact support for payment instructions.</p>
     </div>
     {% endif %}
   </div>
 
-  <div class="slip-upload">
+  <div class="slip-upload" style="flex: 1; min-width: 320px;">
     <h3>Upload Payment Slip</h3>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {% for field in form %}
-            <div class="form-field">
+            <div class="form-field" style="margin-bottom: 12px;">
                 {{ field.label_tag }}
                 {{ field }}
                 {% if field.errors %}<div class="form-errors">{{ field.errors }}</div>{% endif %}
@@ -53,6 +66,7 @@
     </form>
   </div>
 </div>
+
 {% else %}
 <div style="text-align: center; padding: 30px; max-width: 600px; margin: 20px auto;" class="detail-card">
     {% if order.status == 'waiting_for_approval' %}

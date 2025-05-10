@@ -124,13 +124,13 @@ LOGIN_REDIRECT_URL = 'outfits:user_profile'
 LOGOUT_REDIRECT_URL = 'outfits:home'
 
 # ✅ Email settings
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true'
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'webmaster@localhost'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS") == "True"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 
 # ✅ Google login config
 SOCIALACCOUNT_PROVIDERS = {
@@ -152,11 +152,16 @@ ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
+ACCOUNT_ADAPTER = 'outfits.adapters.CustomAccountAdapter'
+SOCIALACCOUNT_ADAPTER = 'outfits.adapters.CustomSocialAccountAdapter'
+
+
 # ✅ Bank info
 BANK_ACCOUNT_NAME = os.environ.get('BANK_ACCOUNT_NAME', 'Please set BANK_ACCOUNT_NAME in .env')
 BANK_ACCOUNT_NUMBER = os.environ.get('BANK_ACCOUNT_NUMBER', 'Please set BANK_ACCOUNT_NUMBER in .env')
 BANK_NAME = os.environ.get('BANK_NAME', 'Please set BANK_NAME in .env')
-BANK_QR_CODE_STATIC_PATH = os.environ.get('BANK_QR_CODE_STATIC_PATH', 'outfits/images/my_qr.jpg')
+# BANK_QR_CODE_STATIC_PATH = os.environ.get('BANK_QR_CODE_STATIC_PATH', 'outfits/images/my_qr.jpg') # You can comment out or remove this if no longer needed
+PROMPTPAY_ID = os.environ.get('PROMPTPAY_ID') # <-- THIS IS THE ADDED LINE
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

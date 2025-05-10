@@ -1,0 +1,14 @@
+{% extends "outfits/base.html" %}
+
+{% block title %}Log Out{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+  <h2>Are you sure you want to log out?</h2>
+  <form method="post" action="{% url 'account_logout' %}">
+    {% csrf_token %}
+    <button type="submit" class="button danger-button">Log Out</button>
+    <a href="{% url 'outfits:home' %}" class="button link-button">Cancel</a>
+  </form>
+</div>
+{% endblock %}

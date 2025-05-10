@@ -18,13 +18,13 @@
 <div class="checkout-container" style="max-width: 1100px; margin: 20px auto; padding: 0 15px;">
   <h1 style="text-align: center; margin-bottom: 30px;">Confirm Rental Information</h1>
 
-   {% if form.non_field_errors %}
-      <div class="alert alert-danger">
-          {% for error in form.non_field_errors %}
-              <p>{{ error }}</p>
-          {% endfor %}
-      </div>
-   {% endif %}
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+        {% for error in form.non_field_errors %}
+            <p>{{ error }}</p>
+        {% endfor %}
+    </div>
+  {% endif %}
 
   <div class="checkout-grid">
     <div class="form-section">
@@ -49,7 +49,7 @@
                 </div>
             {% endif %}
             {% if field.help_text %}
-                 <p class="help-text">{{ field.help_text|safe }}</p>
+                <p class="help-text">{{ field.help_text|safe }}</p>
             {% endif %}
         </div>
         {% endfor %}
@@ -69,25 +69,25 @@
                   <span class="text-monospace">{{ item.price_per_day|floatformat:2|intcomma }} / day</span>
               </div>
           {% endfor %}
-           <div class="summary-item" style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
-                <span>Subtotal (Per Day)</span>
-                <span class="text-monospace">{{ cart_subtotal_per_day|floatformat:2|intcomma }}</span>
-            </div>
-             <div class="summary-item">
-                <span>Est. Shipping</span>
-                <span>Calculated later</span>
-            </div>
+          <div class="summary-item" style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+              <span>Subtotal (Per Day)</span>
+              <span class="text-monospace">฿{{ cart_subtotal_per_day|floatformat:2|intcomma }}</span>
+          </div>
+          <div class="summary-item">
+              <span>Shipping</span>
+              <span class="text-monospace">Free</span>
+          </div>
       </div>
       <div class="summary-total">
           <span>Estimated Total</span>
-          <span>(Calculated after duration)</span>
+          <span class="text-muted">(Calculated after rental duration)</span>
       </div>
-       <p style="font-size: 0.8em; color: var(--text-light-color); margin-top: 15px;">The final total, including shipping and rental duration, will be shown on the next step (payment page).</p>
+      <p style="font-size: 0.8em; color: var(--text-light-color); margin-top: 15px;">
+        The final total will be shown after rental duration is calculated on the next page.
+      </p>
     </div>
-
   </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
@@ -107,29 +107,25 @@
                   const endDate = new Date(endDateStr);
 
                   if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate >= startDate) {
-                      const diffTime = endDate - startDate; // Difference in milliseconds
-                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Convert ms to days and add 1
-                      if (diffDays > 0) {
-                          durationDisplay.textContent = `(${diffDays} day${diffDays > 1 ? 's' : ''})`;
-                      } else {
-                           durationDisplay.textContent = '';
-                      }
+                      const diffTime = endDate - startDate;
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                      durationDisplay.textContent = `(${diffDays} day${diffDays > 1 ? 's' : ''})`;
                   } else {
                       durationDisplay.textContent = '';
                   }
               } catch (e) {
-                   console.error("Date calculation error:", e);
-                   durationDisplay.textContent = '';
+                  console.error("Date calculation error:", e);
+                  durationDisplay.textContent = '';
               }
-          } else if (durationDisplay) {
-               durationDisplay.textContent = '';
+          } else {
+              durationDisplay.textContent = '';
           }
       }
 
       if (startDateInput) startDateInput.addEventListener('change', calculateDuration);
       if (endDateInput) endDateInput.addEventListener('change', calculateDuration);
 
-      calculateDuration(); // Initial calculation on page load
+      calculateDuration();
   });
 </script>
 {% endblock %}

@@ -1,72 +1,87 @@
 {% load static %}
 {% load humanize %}
 {% load socialaccount %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MindVibe - Find and rent the perfect outfit for your style.">
-    <title>{% block title %}MindVibe{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'outfits/styles.css' %}">
-    {% block extra_head %}{% endblock %}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MindVibe - Rent Smarter, Live Greener.">
+  <title>{% block title %}MindVibe{% endblock %}</title>
+
+  <!-- CSS & Fonts -->
+  <link rel="stylesheet" href="{% static 'outfits/styles.css' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  {% block extra_head %}{% endblock %}
 </head>
+
 <body>
-    <header class="site-header">
-        <div class="header-inner container">
-            <a href="{% url 'outfits:home' %}" class="logo">MindVibe</a>
-            <nav class="main-nav">
-                <a href="{% url 'outfits:home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">Home</a>
-                <a href="{% url 'outfits:outfit-list' %}" class="nav-link {% if request.resolver_match.url_name == 'outfit-list' or request.resolver_match.url_name == 'outfits-by-category' %}active{% endif %}">All Outfits</a>
-                <a href="{% url 'outfits:cart_detail' %}" class="nav-link cart-link {% if request.resolver_match.url_name == 'cart_detail' %}active{% endif %}" title="Shopping Cart">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="nav-icon cart-icon">
-                      <path fill-rule="evenodd" d="M7.5 6v.75H5.513c-.96 0-1.764.724-1.865 1.679l-1.263 12A1.875 1.875 0 0 0 4.25 22.5h15.5a1.875 1.875 0 0 0 1.865-2.071l-1.263-12a1.875 1.875 0 0 0-1.865-1.679H16.5V6a4.5 4.5 0 1 0-9 0ZM12 3a3 3 0 0 0-3 3v.75h6V6a3 3 0 0 0-3-3Zm-3 8.25a3 3 0 1 0 6 0v-.75a.75.75 0 0 1 1.5 0v.75a4.5 4.5 0 1 1-9 0v-.75a.75.75 0 0 1 1.5 0v.75Z" clip-rule="evenodd" />
-                    </svg>
-                    {% if cart_item_count > 0 %}
-                        <span class="cart-badge">{{ cart_item_count }}</span>
-                    {% endif %}
-                </a>
-                {% if user.is_authenticated %}
-                    <a href="{% url 'outfits:order_history' %}" class="nav-link {% if request.resolver_match.url_name == 'order_history' %}active{% endif %}">Order History</a>
-                    <a href="{% url 'outfits:user_profile' %}" class="nav-link user-greeting {% if request.resolver_match.url_name == 'user_profile' %}active{% endif %}" title="My Profile">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="nav-icon user-icon">
-                          <path fill-rule="evenodd" d="M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Zm-12.54-1.285A7.486 7.486 0 0 1 12 15a7.486 7.486 0 0 1 5.855 2.812A8.224 8.224 0 0 1 12 20.25a8.224 8.224 0 0 1-5.855-2.438ZM15.75 9a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" clip-rule="evenodd" />
-                        </svg>
-                        <span class="user-nav-name">{{ user.first_name|default:user.username }}</span>
-                    </a>
-                    <form action="{% url 'account_logout' %}" method="post" class="logout-form">
-                        {% csrf_token %}
-                        <button type="submit" class="button link-button" title="Logout">Logout</button>
-                    </form>
-                {% else %}
-                <a href="{% provider_login_url 'google' %}" class="nav-link auth-link">Login with Google</a>
-                    <a href="{% url 'outfits:register' %}" class="nav-link auth-link">Sign Up</a>
-                {% endif %}
-            </nav>
-        </div>
-    </header>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="{% url 'outfits:home' %}" class="logo">MindVibe</a>
+      <nav class="main-nav">
+        <a href="{% url 'outfits:home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+          <i class="fa-solid fa-house nav-icon"></i> Home
+        </a>
+        <a href="{% url 'outfits:outfit-list' %}" class="nav-link {% if request.resolver_match.url_name in 'outfit-list outfits-by-category' %}active{% endif %}">
+          <i class="fa-solid fa-shirt nav-icon"></i> All Outfits
+        </a>
+        <a href="{% url 'outfits:cart_detail' %}" class="nav-link cart-link {% if request.resolver_match.url_name == 'cart_detail' %}active{% endif %}" title="Cart">
+          <i class="fa-solid fa-basket-shopping nav-icon"></i>
+          {% if cart_item_count|default:0 > 0 %}
+            <span class="cart-badge">{{ cart_item_count }}</span>
+          {% endif %}
+        </a>
+        {% if user.is_authenticated %}
+          <a href="{% url 'outfits:order_history' %}" class="nav-link {% if request.resolver_match.url_name == 'order_history' %}active{% endif %}">
+            <i class="fa-solid fa-receipt nav-icon"></i> Orders
+          </a>
+          <a href="{% url 'outfits:user_profile' %}" class="nav-link {% if request.resolver_match.url_name == 'user_profile' %}active{% endif %}">
+            <i class="fa-solid fa-user nav-icon"></i>
+            <span class="user-nav-name">{{ user.first_name|default:user.username }}</span>
+          </a>
+          <form action="{% url 'account_logout' %}" method="post" class="logout-form">
+            {% csrf_token %}
+            <button type="submit" class="button link-button">Logout</button>
+          </form>
+        {% else %}
+          <a href="{% url 'account_login' %}" class="nav-link auth-link">
+            <i class="fa-solid fa-right-to-bracket nav-icon"></i> Login
+          </a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
 
-    {% if messages %}
-        <div class="messages-container container" style="padding-top: 15px;">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}" role="alert">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
+  <!-- Messages -->
+  {% if messages %}
+    <div class="messages-container container">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
 
-    <main class="container main-content">
-        {% block content %}
-        {% endblock %}
-    </main>
+  <!-- Main Content -->
+  <main class="main-content container">
+    {% block content %}{% endblock %}
+  </main>
 
-    <footer class="site-footer">
-        <div class="container">
-            <p>&copy; {% now "Y" %} MindVibe. All rights reserved.</p>
-        </div>
-    </footer>
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; {% now "Y" %} MindVibe. All rights reserved.</p>
+    </div>
+  </footer>
 
-    {% block extra_js %}{% endblock %}
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

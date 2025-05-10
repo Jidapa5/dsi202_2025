@@ -29,9 +29,10 @@
         {# Reverted: Display current status for today only #}
         {% if current_status_text %}
         <p style="margin-bottom: 20px; font-weight: 500;">Current Status (Today):
-            <span style="color: {% if current_status_text == 'Available' %}var(--success-border){% else %}var(--error-border){% endif %};">
-                {{ current_status_text }}
-            </span>
+           <span class="{% if current_status_text == 'Available' %}green-text{% else %}red-text{% endif %}">
+            {{ current_status_text }}
+           </span>
+
         </p>
         {% endif %}
 

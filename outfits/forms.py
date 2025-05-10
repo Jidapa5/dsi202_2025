@@ -86,20 +86,20 @@ class CartAddItemForm(forms.Form):
     pass # Currently just a placeholder, logic is in the view
 
 # --- PaymentSlipUploadForm ---
+
 class PaymentSlipUploadForm(forms.ModelForm):
-    payment_datetime = forms.DateTimeField(
-        label='Date & Time of Transfer',
-        widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-input'}),
-        required=True
-    )
-    payment_slip = forms.ImageField(
-        label='Attach Payment Slip',
-        required=True,
-        widget=forms.ClearableFileInput(attrs={'class': 'form-input'}) # Allows clearing/changing file
-    )
     class Meta:
         model = Order
         fields = ['payment_datetime', 'payment_slip']
+        widgets = {
+            'payment_datetime': forms.DateTimeInput(attrs={
+                'type': 'datetime-local',
+                'placeholder': 'dd/mm/yyyy hh:mm'
+            }),
+            'payment_slip': forms.FileInput(attrs={
+                'accept': 'image/*,application/pdf'
+            }),
+        }
 
 # --- UserEditForm (For profile page) ---
 class UserEditForm(forms.ModelForm):
@@ -163,3 +163,4 @@ class ReturnUploadForm(forms.ModelForm):
     class Meta:
         model = Order # Linked to the Order model
         fields = ['return_tracking_number', 'return_slip']
+

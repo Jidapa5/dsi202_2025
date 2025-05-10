@@ -27,7 +27,6 @@
         <p><strong>Email:</strong> {{ order.email }}</p>
         <p><strong>Phone:</strong> {{ order.phone }}</p>
         <p><strong>Shipping Address:</strong><br>{{ order.address|linebreaksbr }}</p>
-        <p><strong>Shipping Cost:</strong> {{ order.shipping_cost|floatformat:2|intcomma }}</p>
         <p><strong>Shipping Tracking:</strong> {{ order.shipping_tracking_number|default:"-" }}</p>
         <p><strong>Return Tracking:</strong> {{ order.return_tracking_number|default:"-" }}</p>
         {% if order.return_slip %}
@@ -39,31 +38,34 @@
     </div>
 
     <div class="detail-card">
-        <h3>Rental Period & Items</h3>
-        <p><strong>Rental Start Date:</strong> {{ order.rental_start_date|date:"d M Y" }}</p>
-        <p><strong>Return Date:</strong> {{ order.rental_end_date|date:"d M Y" }}</p>
-        <p><strong>Duration:</strong> {{ order.rental_duration_days }} day{{ order.rental_duration_days|pluralize }}</p>
-        <table class="data-table items-table" style="margin-top: 15px;">
-          <thead>
-            <tr>
-                <th>Outfit</th>
-                <th class="text-right">Price/Day</th>
-                <th class="text-center">Qty</th>
-                <th class="text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for item in order.items.all %}
-                <tr>
-                    <td data-label="Outfit">{{ item.outfit.name }}</td>
-                    <td data-label="Price/Day" class="text-right text-monospace">{{ item.price_per_day|floatformat:2|intcomma }}</td>
-                    <td data-label="Qty" class="text-center">{{ item.quantity }}</td>
-                    <td data-label="Total" class="text-right text-monospace">{{ item.item_total_cost|floatformat:2|intcomma }}</td>
-                </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <h3>Rental Period & Items</h3>
+    <p><strong>Rental Start Date:</strong> {{ order.rental_start_date|date:"d M Y" }}</p>
+    <p><strong>Return Date:</strong> {{ order.rental_end_date|date:"d M Y" }}</p>
+    <p><strong>Duration:</strong> {{ order.rental_duration_days }} day{{ order.rental_duration_days|pluralize }}</p>
+
+    <div style="overflow-x: auto; width: 100%;">
+      <table class="data-table items-table" style="margin-top: 15px; width: 100%; table-layout: auto;">
+        <thead>
+          <tr>
+              <th>Outfit</th>
+              <th class="text-right">Price/Day</th>
+              <th class="text-center">Qty</th>
+              <th class="text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in order.items.all %}
+              <tr>
+                  <td data-label="Outfit">{{ item.outfit.name }}</td>
+                  <td data-label="Price/Day" class="text-right text-monospace">{{ item.price_per_day|floatformat:2|intcomma }}</td>
+                  <td data-label="Qty" class="text-center">{{ item.quantity }}</td>
+                  <td data-label="Total" class="text-right text-monospace">{{ item.item_total_cost|floatformat:2|intcomma }}</td>
+              </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+</div>
 
     <div class="detail-card">
         <h3>Payment Information</h3>
