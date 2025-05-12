@@ -1,0 +1,417 @@
+{% extends 'outfits/base.html' %}
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+
+{% block title %}{% trans "About Us" %} - MindVibe{% endblock %}
+
+{% block extra_head %}
+{# --- External CSS --- #}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+{# --- Internal CSS --- #}
+<style>
+  /* Styles for Why Second-Hand Section */
+  .reason-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center; /* จัดกลาง */
+    gap: 15px; /* ลดช่องว่างลง */
+  }
+
+  .reason-grid .reason-box {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    /* --- สไตล์ขนาดและ layout หลัก --- */
+    flex: 1 1 155px; /* กำหนด flex-basis */
+    max-width: 165px; /* ลดความกว้างสูงสุด */
+    border-radius: 12px;
+    padding: 20px 15px; /* ลด padding */
+    color: #555;
+    /* --- ทำให้ icon/text จัดกลาง --- */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .reason-grid .reason-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  }
+
+  .reason-grid .reason-box p {
+     margin-top: 15px;
+     font-weight: 500;
+     font-size: 0.9em; /* ลดขนาดฟอนต์ */
+     line-height: 1.4;
+  }
+
+   .reason-grid .reason-box i {
+       font-size: 2em; /* ขนาด icon */
+       /* สี icon กำหนด inline */
+   }
+
+  /* Responsive adjustments for Why Second-Hand boxes */
+  @media (max-width: 992px) {
+    .reason-grid {
+        gap: 10px;
+    }
+     .reason-grid .reason-box {
+        flex-basis: 140px;
+        max-width: 150px;
+        padding: 15px 10px;
+    }
+     .reason-grid .reason-box i {
+        font-size: 1.8em;
+     }
+     .reason-grid .reason-box p {
+        font-size: 0.85em;
+     }
+  }
+
+  @media (max-width: 768px) {
+    .reason-grid {
+       flex-direction: column; /* กลับเป็นแนวตั้ง */
+       align-items: center;
+       gap: 20px;
+    }
+     .reason-grid .reason-box {
+        /* กลับไปใช้ขนาดที่เหมาะสมกับแนวตั้ง */
+        flex-basis: auto;
+        max-width: 250px; /* หรือ % */
+        width: 80%;
+        padding: 20px 15px; /* คืน padding */
+    }
+      .reason-grid .reason-box i {
+        font-size: 2em; /* คืนขนาด icon */
+     }
+     .reason-grid .reason-box p {
+        font-size: 0.9em; /* คืนขนาด font */
+     }
+  }
+
+  /* Styles for Impact Section */
+   .impact-section {
+        padding: 60px 20px;
+        background-color: #D7E5D4; /* MindVibe Green BG */
+   }
+   .impact-section h2 {
+       color: #47664F; /* Darker Green Heading */
+       margin-bottom: 15px;
+   }
+    .impact-section h2 i { /* ทำให้ icon สีเดียวกับ h2 */
+        color: #47664F;
+    }
+   .impact-section p {
+       color: #47664F; /* Darker Green Text */
+   }
+   .impact-section .impact-grid {
+       display: flex;
+       justify-content: space-around;
+       flex-wrap: wrap;
+       gap: 30px;
+       margin-top: 50px; /* Add margin top for spacing */
+   }
+   .impact-section .impact-grid > div { /* Style each stat box */
+        flex: 1;
+        min-width: 180px;
+        text-align: center;
+   }
+   .impact-section .stat-number {
+        font-size: 2em;
+        font-weight: bold;
+        margin: 10px 0 5px;
+        color: #47664F; /* Dark green */
+   }
+   .impact-section .impact-grid i {
+       font-size: 2.5em;
+       color: #607d66; /* Muted green icons */
+   }
+   .impact-section .impact-grid a {
+       color: #5a745e; /* Darker green source links */
+       font-size: 0.8em;
+       text-decoration: underline;
+       opacity: 0.9;
+   }
+   .impact-section .impact-grid p { /* Ensure paragraph within grid has correct color */
+       color: #47664F;
+       margin-bottom: 5px; /* Spacing before source link */
+   }
+
+
+  /* Styles for CTA Section */
+  .cta-section {
+    padding: 60px 20px;
+    background-color: #F7D7E0; /* MindVibe Pink BG */
+    color: #5C4033; /* Darker Text */
+    text-align: center;
+  }
+  .cta-section h2 {
+      margin-bottom: 15px;
+  }
+  .cta-section p {
+    font-size: 1.1em;
+    max-width: 600px;
+    margin: 0 auto 25px auto;
+  }
+  .cta-section .primary-button {
+      display: inline-block;
+      background-color: #fff; /* White Background */
+      color: #CB9CA6; /* MindVibe Pink Text */
+      padding: 12px 30px;
+      border-radius: 25px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+      border: 1px solid #CB9CA6;
+  }
+  .cta-section .primary-button:hover {
+      background-color: #f8f8f8;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+
+
+  /* Styles for Popup */
+  #popupOverlay {
+    display: none; /* Start hidden */
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background-color: rgba(0,0,0,0.6);
+    z-index:1000;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  #popupOverlay.visible {
+      display: flex; /* Make visible */
+      opacity: 1;
+  }
+  #popupContent {
+    background:white;
+    padding: 30px;
+    max-width:500px;
+    margin: 20px;
+    border-radius:10px;
+    position:relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    color: #333;
+  }
+  #popupClose {
+    position:absolute;
+    top:10px;
+    right:15px;
+    font-size: 1.5em;
+    font-weight:bold;
+    cursor:pointer;
+    color: #888;
+  }
+  #popupClose:hover {
+      color: #333;
+  }
+
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+{# --- 1. Hero Section --- #}
+<section class="hero-section" style="text-align: center; padding: 60px 20px; background-color: #FEEAFA;">
+  <h1 class="animate__animated animate__fadeInDown" style="font-size: 2.8em; color: #403B33;">{% trans "Fashion that loves the Earth" %}</h1>
+  <p class="animate__animated animate__fadeInUp" style="font-size: 1.2em; color: #7A8575; margin-top: 10px;">
+    {% trans "MindVibe is on a mission to slow down fast fashion through mindful renting." %}
+  </p>
+</section>
+
+{# --- 2. Why Choose Second-Hand Section --- (Layout Adjusted) #}
+<section class="why-secondhand" style="padding: 60px 20px; background-color: #fff8f4; text-align: center;">
+  <div class="container" style="max-width: 960px; margin: auto;">
+    <h2 style="color: #B2788A; margin-bottom: 40px;"><i class="fa-solid fa-heart"></i> {% trans "Why Choose Second-Hand?" %}</h2>
+    {# Grid using updated CSS rules #}
+    <div class="reason-grid">
+      {# Reason 1 - Inline styles for background/icon color only #}
+      <div class="reason-box" style="background-color: #FCEEF4;">
+        <i class="fa-solid fa-trash-arrow-up" style="color: #B2788A;"></i>
+        <p>{% trans "Reduce textile waste and lower your carbon footprint" %}</p>
+      </div>
+      {# Reason 2 #}
+      <div class="reason-box" style="background-color: #F1F8F2;">
+        <i class="fa-solid fa-clock-rotate-left" style="color: #89A78F;"></i>
+        <p>{% trans "Extend the life of quality fashion" %}</p>
+      </div>
+      {# Reason 3 #}
+      <div class="reason-box" style="background-color: #FDF6E3;">
+        <i class="fa-solid fa-coins" style="color: #B49C68;"></i>
+        <p>{% trans "Save money while staying stylish" %}</p>
+      </div>
+      {# Reason 4 #}
+      <div class="reason-box" style="background-color: #E9F1FD;">
+        <i class="fa-solid fa-scale-balanced" style="color: #799BBE;"></i>
+        <p>{% trans "Support ethical and mindful fashion choices" %}</p>
+      </div>
+      {# Reason 5 #}
+      <div class="reason-box" style="background-color: #F3EBFF;">
+        <i class="fa-solid fa-globe" style="color: #9E8FBF;"></i>
+        <p>{% trans "Be part of a global movement for circular fashion" %}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# --- 3. Our Impact Section --- (Colors Adjusted) #}
+<section class="impact-section"> {# Styles defined in CSS block #}
+  <div class="container" style="max-width: 960px; margin: auto; text-align: center;">
+    <h2><i class="fa-solid fa-seedling"></i> {% trans "Our Impact" %}</h2>
+    <p style="font-size: 1.1em; margin-top: 10px;">{% trans "Every rental makes a difference. Here's what we've achieved together." %}</p>
+    <div class="impact-grid"> {# Styles defined in CSS block #}
+      {# Stat 1 #}
+      <div>
+        <i class="fa-solid fa-shirt"></i>
+        <h3 class="stat-number" data-target="{{ outfits_rented|default:0 }}">0</h3>
+        <p>{% trans "Outfits Rented" %}</p>
+        <a href="#" onclick="showPopup('Internal system data collected from rental orders')">{% trans "View Source" %}</a>
+      </div>
+      {# Stat 2 #}
+      <div>
+        <i class="fa-solid fa-ban"></i>
+        <h3 class="stat-number" data-target="{{ new_clothes_saved|default:0 }}">0</h3>
+        <p>{% trans "New Clothes Saved from Production" %}</p>
+        <a href="#" onclick="showPopup('Green Story Inc. (2020) estimates each rental offsets 0.8 new purchases.')">{% trans "View Source" %}</a>
+      </div>
+      {# Stat 3 #}
+      <div>
+        <i class="fa-solid fa-recycle"></i>
+        <h3 class="stat-number" data-target="{{ textile_waste_avoided|default:0 }}">0</h3>
+        <p>{% trans "Textile Waste Avoided (tons)" %}</p>
+        <a href="#" onclick="showPopup('Ellen MacArthur Foundation (2021): ~200 outfits = 1 ton of waste.')">{% trans "View Source" %}</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# --- 4. Image Section --- #}
+<section class="image-section" style="padding: 60px 20px; background-color: #FBF9F6;">
+  <div class="container" style="max-width: 800px; margin: auto; text-align: center;">
+    <img src="{% static 'outfits/images/about_sustain.png' %}" alt="{% trans 'Sustainable Fashion' %}" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+    <p style="font-size: 0.9em; color: #777; margin-top: 15px; font-style: italic;">
+      {% trans "Image: Clothes given a second life through our platform." %}
+    </p>
+  </div>
+</section>
+
+{# --- 5. Call to Action Section --- (Colors Adjusted) #}
+<section class="cta-section"> {# Styles defined in CSS block #}
+  <div class="container" style="max-width: 960px; margin: auto;"> {# Added container for consistency #}
+      <h2><i class="fa-solid fa-hands-holding-circle"></i> {% trans "Join the Movement" %}</h2>
+      <p>{% trans "Be part of the shift. Rent consciously, wear joyfully, and help us shape the future of fashion." %}</p>
+      <a href="{% url 'outfits:outfit-list' %}" class="button primary-button">
+        {% trans "Browse Our Outfits" %}
+      </a>
+  </div>
+</section>
+
+{# --- Popup Structure (Hidden by default) --- #}
+<div id="popupOverlay" onclick="closePopup()">
+  <div id="popupContent" onclick="event.stopPropagation()">
+    <span id="popupClose" onclick="closePopup()">&times;</span>
+    <p id="popupText"></p>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+  // Function to animate number counting up
+  function animateValue(el, end) {
+    let start = 0;
+    const duration = 2000;
+    end = parseFloat(end) || 0;
+    const range = end - start;
+    const startTime = performance.now();
+    const decimalPlaces = (String(end).split('.')[1] || '').length;
+
+    function step(currentTime) {
+      const elapsedTime = currentTime - startTime;
+      const progress = Math.min(1, elapsedTime / duration);
+      let currentVal = start + range * progress;
+
+      el.textContent = new Intl.NumberFormat(document.documentElement.lang || 'en-US', { // Use page lang
+          minimumFractionDigits: decimalPlaces,
+          maximumFractionDigits: decimalPlaces
+      }).format(currentVal);
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+         el.textContent = new Intl.NumberFormat(document.documentElement.lang || 'en-US', {
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces
+        }).format(end);
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  // Initialize the stat animations when the element might be visible
+  function initAnimatedStats() {
+    const stats = document.querySelectorAll(".stat-number");
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const el = entry.target;
+            const target = el.getAttribute("data-target");
+             if (!el.dataset.animated) {
+                const targetValue = parseFloat(target);
+                if (!isNaN(targetValue)) {
+                    animateValue(el, targetValue);
+                    el.dataset.animated = "true";
+                }
+             }
+            obs.unobserve(el);
+          }
+        });
+      }, { threshold: 0.3 });
+
+      stats.forEach(el => observer.observe(el));
+    } else {
+      // Fallback
+       stats.forEach(el => {
+         const target = parseFloat(el.getAttribute("data-target"));
+         if (!isNaN(target) && !el.dataset.animated) {
+            animateValue(el, target);
+            el.dataset.animated = "true";
+         }
+       });
+    }
+  }
+
+  // Popup functions
+  const overlay = document.getElementById("popupOverlay");
+  function showPopup(text) {
+    document.getElementById("popupText").textContent = text;
+    overlay.classList.add("visible"); // Use class to trigger display and transition
+  }
+
+  function closePopup() {
+     overlay.classList.remove("visible");
+  }
+
+  // Initialize animations when the DOM is ready
+  document.addEventListener("DOMContentLoaded", initAnimatedStats);
+
+  // Close popup with Escape key
+  document.addEventListener('keydown', function(event) {
+    if (event.key === "Escape" && overlay.classList.contains("visible")) {
+        closePopup();
+    }
+  });
+
+</script>
+{% endblock %}
