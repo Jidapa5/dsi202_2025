@@ -1,17 +1,37 @@
-<div class="outfit-detail-container" style="text-align: center;">
-      <div class="outfit-image">
-        <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}">
-      </div>
-      <div class="outfit-info">
-        <h2>{{ outfit.name }}</h2>
-        <p class="price">ราคาต่อวัน: {{ outfit.price }} บาท</p>
-        <p class="description">{{ outfit.description }}</p>
-  
-        <form method="POST" class="rental-form">
-          {% csrf_token %}
-          <label for="days">ระยะเวลาเช่า (วัน):</label>
-          <input type="number" id="days" name="rental_days" min="1" required>
-          <button type="submit">เช่าชุดนี้</button>
-        </form>
-      </div>
-    </div>
+{% extends 'outfits/base.html' %}
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+
+{% block title %}{{ outfit.name }} - MindVibe{% endblock %}
+
+{% block content %}
+<div class="outfit-detail-container" style="text-align: center; max-width: 800px; margin: auto; padding: 20px;">
+  <div class="outfit-image" style="margin-bottom: 20px;">
+    {% if outfit.image %}
+      <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}" style="max-width: 100%; border-radius: 12px;">
+    {% else %}
+      <div style="height: 300px; background-color: #eee; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+        {% trans "(No Image Available)" %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="outfit-info">
+    <h2>{{ outfit.name }}</h2>
+    <p class="price" style="font-weight: bold; margin-top: 10px;">
+      {% trans "Rental Price" %}: {{ outfit.price|floatformat:2|intcomma }} {% trans "Baht" %}
+    </p>
+    <p class="description" style="margin-bottom: 20px;">
+      {{ outfit.description }}
+    </p>
+
+    <form method="POST" class="rental-form" style="display: inline-block; text-align: left; max-width: 300px; margin: auto;">
+      {% csrf_token %}
+      <label for="days">{% trans "Rental duration (days)" %}:</label>
+      <input type="number" id="days" name="rental_days" min="1" required style="width: 100%; margin-bottom: 10px; padding: 8px;">
+      <button type="submit" class="button primary-button" style="width: 100%;">{% trans "Rent this outfit" %}</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

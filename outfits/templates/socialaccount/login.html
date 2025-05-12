@@ -1,22 +1,24 @@
 {% extends "outfits/base.html" %}
 {% load i18n %}
 
-{% block title %}Sign In with Google{% endblock %}
+{% block title %}{% trans "Sign In with Google" %}{% endblock %}
 
 {% block content %}
 <div class="auth-container">
-  <h2>Sign In with Google</h2>
-  <p class="social-login-prompt">You are about to sign in using your Google account.</p>
+  <h2>{% trans "Sign In with Google" %}</h2>
+  <p class="social-login-prompt">
+    {% trans "You are about to sign in using your Google account." %}
+  </p>
 
   <form method="post" action="">
     {% csrf_token %}
     <button type="submit" class="primary-button" style="width: 100%; margin-top: 20px;">
-      Continue
+      {% trans "Continue" %}
     </button>
   </form>
 
   <div class="auth-footer-link" style="margin-top: 30px;">
-    <a href="{% url 'account_login' %}">← Back to Login</a>
+    <a href="{% url 'account_login' %}">← {% trans "Back to Login" %}</a>
   </div>
 </div>
 {% endblock %}

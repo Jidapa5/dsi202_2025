@@ -1,43 +1,54 @@
 {% extends 'outfits/base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Edit Profile - {{ user.username }}{% endblock %}
+{% block title %}{% trans "Edit Profile" %} - {{ user.username }}{% endblock %}
 
 {% block content %}
 <div class="profile-container">
-    <h2 style="text-align: center; margin-bottom: 25px;">Edit Your Profile</h2>
+    <h2 style="text-align: center; margin-bottom: 25px;">{% trans "Edit Your Profile" %}</h2>
 
     {% if messages %}
        <div class="messages-container" style="padding-bottom: 15px;">
-            {% for message in messages %} <div class="alert alert-{{ message.tags }}">{{ message }}</div> {% endfor %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
         </div>
     {% endif %}
 
     <div class="profile-readonly" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color);">
-         <p><strong>Username:</strong> {{ user.username }} (cannot be changed)</p>
-         <p><strong>Date Joined:</strong> {{ user.date_joined|date:"d M Y" }}</p>
+         <p><strong>{% trans "Username" %}:</strong> {{ user.username }} ({% trans "cannot be changed" %})</p>
+         <p><strong>{% trans "Date Joined" %}:</strong> {{ user.date_joined|date:"DATE_FORMAT" }}</p>
     </div>
 
     <form method="post" class="profile-form">
         {% csrf_token %}
 
-        <h3>Account Information</h3>
+        <h3>{% trans "Account Information" %}</h3>
         {% for field in user_form %}
             <div class="form-field">
                 {{ field.label_tag }}
                 {{ field }}
-                {% if field.errors %}<div class="form-errors">{{ field.errors }}</div>{% endif %}
-                {% if field.help_text %}<p class="help-text">{{ field.help_text|safe }}</p>{% endif %}
+                {% if field.errors %}
+                    <div class="form-errors">{{ field.errors }}</div>
+                {% endif %}
+                {% if field.help_text %}
+                    <p class="help-text">{{ field.help_text|safe }}</p>
+                {% endif %}
             </div>
         {% endfor %}
 
-        <h3>Contact / Saved Address</h3>
+        <h3>{% trans "Contact / Saved Address" %}</h3>
         {% for field in profile_form %}
              <div class="form-field">
                 {{ field.label_tag }}
                 {{ field }}
-                {% if field.errors %}<div class="form-errors">{{ field.errors }}</div>{% endif %}
-                {% if field.help_text %}<p class="help-text">{{ field.help_text|safe }}</p>{% endif %}
+                {% if field.errors %}
+                    <div class="form-errors">{{ field.errors }}</div>
+                {% endif %}
+                {% if field.help_text %}
+                    <p class="help-text">{{ field.help_text|safe }}</p>
+                {% endif %}
             </div>
         {% endfor %}
 
@@ -48,11 +59,13 @@
             <div class="form-errors">{{ profile_form.non_field_errors }}</div>
         {% endif %}
 
-        <button type="submit" class="button primary-button" style="width: 100%; padding: 12px; margin-top: 20px;">Save Changes</button>
+        <button type="submit" class="button primary-button" style="width: 100%; padding: 12px; margin-top: 20px;">
+            {% trans "Save Changes" %}
+        </button>
     </form>
 
      <p style="text-align: center; margin-top: 20px; font-size: 0.9em;">
-         <a href="{% url 'password_change' %}">Want to change your password?</a>
+         <a href="{% url 'password_change' %}">{% trans "Want to change your password?" %}</a>
      </p>
 </div>
 {% endblock %}

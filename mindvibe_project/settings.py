@@ -7,17 +7,10 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY')
-if not SECRET_KEY:
-    raise ValueError("SECRET_KEY is not set in environment variables!")
+SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-dev-key')
+DEBUG = int(os.getenv('DEBUG', 0)) == 1
 
-DEBUG = int(os.environ.get('DEBUG', 0)) == 1
-
-allowed_hosts_str = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
-ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(',') if host.strip()]
-if DEBUG:
-    if 'localhost' not in ALLOWED_HOSTS: ALLOWED_HOSTS.append('localhost')
-    if '127.0.0.1' not in ALLOWED_HOSTS: ALLOWED_HOSTS.append('127.0.0.1')
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # ✅ Installed apps
 INSTALLED_APPS = [
@@ -31,9 +24,9 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'django.contrib.sites',
 
-    "crispy_forms",
+    'crispy_forms',
 
-    # App ของคุณ
+    # Your app
     'outfits',
 
     # allauth + Google
@@ -44,7 +37,6 @@ INSTALLED_APPS = [
 ]
 
 SITE_ID = 1
-
 CRISPY_TEMPLATE_PACK = "bootstrap4"
 
 # ✅ Middleware
@@ -52,6 +44,9 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+
+    'django.middleware.locale.LocaleMiddleware',  # ✅ ต้องมีตรงนี้
+
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -72,6 +67,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'django.template.context_processors.i18n',  # ✅ i18n context
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'outfits.context_processors.cart',
@@ -82,10 +78,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'mindvibe_project.wsgi.application'
 
-# ✅ Database
+# ✅ Database (PostgreSQL via DATABASE_URL or fallback to SQLite)
 DATABASES = {
     'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600
     )
 }
 
@@ -103,13 +100,21 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# ✅ i18n
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Asia/Bangkok'
+# ✅ Internationalization
+LANGUAGE_CODE = 'en'
+
 USE_I18N = True
 USE_TZ = True
+TIME_ZONE = 'Asia/Bangkok'
 
-# ✅ Static & media
+LANGUAGES = [
+    ('en', 'English'),
+    ('th', 'ภาษาไทย'),
+]
+
+LOCALE_PATHS = [BASE_DIR / 'locale']
+
+# ✅ Static & Media
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = []
@@ -123,7 +128,7 @@ LOGIN_URL = 'account_login'
 LOGIN_REDIRECT_URL = 'outfits:user_profile'
 LOGOUT_REDIRECT_URL = 'outfits:home'
 
-# ✅ Email settings
+# ✅ Email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv("EMAIL_HOST")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
@@ -132,12 +137,12 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 
-# ✅ Google login config
+# ✅ Google OAuth (django-allauth)
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
-            'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
-            'secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+            'client_id': os.getenv('GOOGLE_CLIENT_ID', ''),
+            'secret': os.getenv('GOOGLE_CLIENT_SECRET', ''),
             'key': ''
         },
         'SCOPE': ['profile', 'email'],
@@ -145,7 +150,6 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-# ✅ allauth settings (เฉพาะ Google login)
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
@@ -155,16 +159,11 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 ACCOUNT_ADAPTER = 'outfits.adapters.CustomAccountAdapter'
 SOCIALACCOUNT_ADAPTER = 'outfits.adapters.CustomSocialAccountAdapter'
 
-
-# ✅ Bank info
-BANK_ACCOUNT_NAME = os.environ.get('BANK_ACCOUNT_NAME', 'Please set BANK_ACCOUNT_NAME in .env')
-BANK_ACCOUNT_NUMBER = os.environ.get('BANK_ACCOUNT_NUMBER', 'Please set BANK_ACCOUNT_NUMBER in .env')
-BANK_NAME = os.environ.get('BANK_NAME', 'Please set BANK_NAME in .env')
-# BANK_QR_CODE_STATIC_PATH = os.environ.get('BANK_QR_CODE_STATIC_PATH', 'outfits/images/my_qr.jpg') # You can comment out or remove this if no longer needed
-PROMPTPAY_ID = os.environ.get('PROMPTPAY_ID') # <-- THIS IS THE ADDED LINE
+# ✅ Bank & PromptPay
+BANK_ACCOUNT_NAME = os.getenv('BANK_ACCOUNT_NAME', '')
+BANK_ACCOUNT_NUMBER = os.getenv('BANK_ACCOUNT_NUMBER', '')
+BANK_NAME = os.getenv('BANK_NAME', '')
+PROMPTPAY_ID = os.getenv('PROMPTPAY_ID', '')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 CART_SESSION_ID = 'cart'
-
-LOGIN_URL = 'account_login'

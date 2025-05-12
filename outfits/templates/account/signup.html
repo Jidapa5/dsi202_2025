@@ -1,12 +1,14 @@
 {% extends "outfits/base.html" %}
 {% load static %}
+{% load i18n %}
 {% load socialaccount %}
 
-{% block title %}Sign Up{% endblock %}
+{% block title %}{% trans "Sign Up" %}{% endblock %}
 
 {% block content %}
 <div class="auth-container">
-  <h2>Create Your Account</h2>
+  <h2>{% trans "Create Your Account" %}</h2>
+
   <form method="POST" action="{% url 'account_signup' %}" class="auth-form">
     {% csrf_token %}
     {{ form.as_p }}
@@ -15,18 +17,20 @@
       <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
     {% endif %}
 
-    <button type="submit" class="button primary-button">Sign Up</button>
+    <button type="submit" class="button primary-button">{% trans "Sign Up" %}</button>
   </form>
 
   <div class="auth-links">
-    <p>Already have an account?
-      <a href="{% url 'account_login' %}">Login</a>
+    <p>{% trans "Already have an account?" %} 
+      <a href="{% url 'account_login' %}">{% trans "Login" %}</a>
     </p>
   </div>
 
   <div class="social-login">
-    <p>or</p>
-    <a href="{% provider_login_url 'google' %}" class="button google-button">Sign up with Google</a>
+    <p>{% trans "or" %}</p>
+    <a href="{% provider_login_url 'google' %}" class="button google-button">
+      {% trans "Sign up with Google" %}
+    </a>
   </div>
 </div>
 {% endblock %}

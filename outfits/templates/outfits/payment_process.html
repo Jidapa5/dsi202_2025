@@ -1,85 +1,96 @@
 {% extends 'outfits/base.html' %}
 {% load humanize %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Submit Payment - Order #{{ order.id }}{% endblock %}
+{% block title %}{% trans "Submit Payment" %} - Order #{{ order.id }}{% endblock %}
 
 {% block content %}
-<div style="max-width: 750px; margin: 20px auto;">
-    <h1 style="text-align: center; margin-bottom: 20px;">Submit Payment Proof</h1>
-    <p style="text-align: center; margin-bottom: 25px;">For Rental Order: <strong>#{{ order.id }}</strong></p>
+<div class="container" style="max-width: 750px; margin: 20px auto;">
+  <h1 style="text-align: center; margin-bottom: 20px;">{% trans "Submit Payment Proof" %}</h1>
+  <p style="text-align: center; margin-bottom: 25px;">
+    {% blocktrans with order_id=order.id %}For Rental Order: #{{ order_id }}{% endblocktrans %}
+  </p>
 
-    {% if messages %}
+  {% if messages %}
     <div class="messages-container" style="padding-bottom: 15px;">
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}" role="alert">
-                {{ message }}
-            </div>
-        {% endfor %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+      {% endfor %}
     </div>
-    {% endif %}
+  {% endif %}
 </div>
 
 {% if order.status == 'pending' %}
 <div class="payment-container" style="display: flex; flex-wrap: wrap; gap: 30px; justify-content: space-between;">
+  <!-- 💸 Payment Info -->
   <div class="bank-details" style="flex: 1; min-width: 320px;">
-    <h3>Payment Details</h3>
-    <p class="total-amount" style="font-weight: 500; color: #a07f8a;">Amount Due: {{ order.total_amount|floatformat:2|intcomma }} THB</p>
+    <h3>{% trans "Payment Details" %}</h3>
+    <p class="total-amount" style="font-weight: 500; color: #a07f8a;">
+      {% trans "Amount Due" %}: {{ order.total_amount|floatformat:2|intcomma }} THB
+    </p>
 
     {% if promptpay_qr_base64 %}
     <div class="promptpay-section" style="display: flex; flex-direction: column; align-items: center; text-align: center; margin: 20px 0;">
-      <h4 style="font-weight: 600; margin-bottom: 10px; color: #444;">Pay via PromptPay</h4>
-      <img src="data:image/png;base64,{{ promptpay_qr_base64 }}" 
-           alt="PromptPay QR Code" 
-           style="width: 220px; height: 220px; border: 2px solid #e3e3e3; border-radius: 12px; background-color: #fff; padding: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+      <h4 style="font-weight: 600; margin-bottom: 10px; color: #444;">{% trans "Pay via PromptPay" %}</h4>
+      <img src="data:image/png;base64,{{ promptpay_qr_base64 }}" alt="{% trans 'PromptPay QR Code' %}" style="width: 220px; height: 220px; border: 2px solid #e3e3e3; border-radius: 12px; background-color: #fff; padding: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
       <p style="font-size: 0.95rem; color: #555; margin-top: 10px;">
-   <strong>PromptPay:</strong> {{ bank_details.account_number }}
-</p>
-<p style="font-size: 0.95rem; color: #555;">
-   <strong>Account:</strong> {{ bank_details.account_name }}
-</p>
-<p style="font-size: 0.9rem; color: #888; margin-top: 10px;">
-   <em>{{ bank_details.note }}</em>
-</p>
+         <strong>{% trans "PromptPay" %}:</strong> {{ bank_details.account_number|default:"-" }}
+      </p>
+      <p style="font-size: 0.95rem; color: #555;">
+         <strong>{% trans "Account" %}:</strong> {{ bank_details.account_name|default:"-" }}
+      </p>
+      {% if bank_details.note %}
+      <p style="font-size: 0.9rem; color: #888; margin-top: 10px;">
+         <em>{{ bank_details.note }}</em>
+      </p>
+      {% endif %}
     </div>
     {% else %}
     <div style="text-align: center; margin-top: 15px; padding: 10px; border: 1px dashed var(--error-border); border-radius: var(--border-radius);">
-        <p style="color: var(--error-color); font-weight: 500;">Payment QR code is currently unavailable.</p>
-        <p style="font-size: 0.9em; margin-top: 5px;">Please contact support for payment instructions.</p>
+        <p style="color: var(--error-color); font-weight: 500;">{% trans "Payment QR code is currently unavailable." %}</p>
+        <p style="font-size: 0.9em; margin-top: 5px;">{% trans "Please contact support for payment instructions." %}</p>
     </div>
     {% endif %}
   </div>
 
+  <!-- 📤 Upload Slip -->
   <div class="slip-upload" style="flex: 1; min-width: 320px;">
-    <h3>Upload Payment Slip</h3>
+    <h3>{% trans "Upload Payment Slip" %}</h3>
     <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {% for field in form %}
-            <div class="form-field" style="margin-bottom: 12px;">
-                {{ field.label_tag }}
-                {{ field }}
-                {% if field.errors %}<div class="form-errors">{{ field.errors }}</div>{% endif %}
-                {% if field.help_text %}<p class="help-text">{{ field.help_text|safe }}</p>{% endif %}
-            </div>
-        {% endfor %}
-        <button type="submit" class="button primary-button" style="width: 100%; padding: 10px; margin-top: 10px;">Confirm Payment Submission</button>
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="form-field" style="margin-bottom: 12px;">
+          {{ field.label_tag }}
+          {{ field }}
+          {% if field.errors %}<div class="form-errors">{{ field.errors }}</div>{% endif %}
+          {% if field.help_text %}<p class="help-text">{{ field.help_text|safe }}</p>{% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="button primary-button" style="width: 100%; padding: 10px; margin-top: 10px;">
+        {% trans "Confirm Payment Submission" %}
+      </button>
     </form>
   </div>
 </div>
 
 {% else %}
+<!-- 🚫 Can't Upload -->
 <div style="text-align: center; padding: 30px; max-width: 600px; margin: 20px auto;" class="detail-card">
-    {% if order.status == 'waiting_for_approval' %}
-        <p>Your payment for Order #{{ order.id }} is currently awaiting approval.</p>
-    {% elif order.status == 'failed' %}
-         <p class="alert alert-danger">Payment for Order #{{ order.id }} was unsuccessful or the slip was incorrect.</p>
-         {% if order.admin_payment_note %}<p>Admin Note: {{ order.admin_payment_note }}</p>{% endif %}
-         <p style="margin-top: 15px;">Please contact support or try submitting payment again if applicable.</p>
-    {% else %}
-         <p>Payment for Order #{{ order.id }} cannot be submitted at this time (Status: {{ order.get_status_display }}).</p>
+  {% if order.status == 'waiting_for_approval' %}
+    <p>{% blocktrans with order_id=order.id %}Your payment for Order #{{ order_id }} is currently awaiting approval.{% endblocktrans %}</p>
+  {% elif order.status == 'failed' %}
+    <p class="alert alert-danger">{% blocktrans with order_id=order.id %}Payment for Order #{{ order_id }} was unsuccessful or the slip was incorrect.{% endblocktrans %}</p>
+    {% if order.admin_payment_note %}
+      <p><strong>{% trans "Admin Note:" %}</strong> {{ order.admin_payment_note }}</p>
     {% endif %}
-     <p style="margin-top: 20px;"><a href="{% url 'outfits:order_detail' order.id %}" class="button secondary-button">View Order Details</a></p>
+    <p style="margin-top: 15px;">{% trans "Please contact support or try submitting payment again if applicable." %}</p>
+  {% else %}
+    <p>{% blocktrans with status=order.get_status_display %}Payment for Order #{{ order.id }} cannot be submitted at this time (Status: {{ status }}).{% endblocktrans %}</p>
+  {% endif %}
+  <p style="margin-top: 20px;">
+    <a href="{% url 'outfits:order_detail' order.id %}" class="button secondary-button">{% trans "View Order Details" %}</a>
+  </p>
 </div>
 {% endif %}
-
 {% endblock %}

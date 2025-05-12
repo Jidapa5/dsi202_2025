@@ -1,17 +1,20 @@
 {% extends 'outfits/base.html' %}
 {% load static %}
 {% load humanize %}
+{% load i18n %}
 
-{% block title %}Search Results for "{{ query }}"{% endblock %}
+{% block title %}
+  {% blocktrans %}Search Results for '{{ query }}'{% endblocktrans %}
+{% endblock %}
 
 {% block content %}
 <section class="search-results-section">
     <header style="margin-bottom: 20px;">
         {% if query %}
-            <h2>Search Results for "{{ query }}"</h2>
+            <h2>{% blocktrans %}Search Results for '{{ query }}'{% endblocktrans %}</h2>
         {% else %}
-             <h2>Search Outfits</h2>
-             <p>Please enter a search term in the form above.</p>
+            <h2>{% trans "Search Outfits" %}</h2>
+            <p>{% trans "Please enter a search term in the form above." %}</p>
         {% endif %}
     </header>
 
@@ -20,60 +23,69 @@
         {% for outfit in results %}
         <article class="outfit-card">
             <div class="outfit-image">
-                 <a href="{% url 'outfits:outfit-detail' outfit.pk %}">
+                <a href="{% url 'outfits:outfit-detail' outfit.pk %}">
                     {% if outfit.image %}
-                            <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}">
+                        <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}">
                     {% else %}
-                         <div class="outfit-card-no-image">(No Image)</div>
+                        <div class="outfit-card-no-image">{% trans "(No Image)" %}</div>
                     {% endif %}
-                 </a>
+                </a>
             </div>
-             <div class="outfit-card-body">
-                <h3 class="outfit-card-title"><a href="{% url 'outfits:outfit-detail' outfit.pk %}">{{ outfit.name }}</a></h3>
-                 {% if outfit.category %}
-                 <p class="outfit-card-category">
+            <div class="outfit-card-body">
+                <h3 class="outfit-card-title">
+                    <a href="{% url 'outfits:outfit-detail' outfit.pk %}">{{ outfit.name }}</a>
+                </h3>
+                {% if outfit.category %}
+                <p class="outfit-card-category">
                     <a href="{% url 'outfits:outfits-by-category' outfit.category.slug %}">{{ outfit.category.name }}</a>
-                 </p>
+                </p>
                 {% endif %}
-                <p class="description" style="font-size: 0.9em; color: var(--text-light-color); margin-bottom: 10px;">{{ outfit.description|truncatechars:70 }}</p>
-                <p class="outfit-card-price">{{ outfit.price|floatformat:2|intcomma }} / day</p>
+                <p class="description" style="font-size: 0.9em; color: var(--text-light-color); margin-bottom: 10px;">
+                    {{ outfit.description|truncatechars:70 }}
+                </p>
+                <p class="outfit-card-price">
+                    {{ outfit.price|floatformat:2|intcomma }} / {% trans "day" %}
+                </p>
                 <div class="outfit-actions">
-                     <form action="{% url 'outfits:add_to_cart' outfit.id %}" method="post">
-                         {% csrf_token %}
-                         <input type="hidden" name="quantity" value="1">
-                         <button type="submit" class="button secondary-button small-button">Add to Cart</button>
+                    <form action="{% url 'outfits:add_to_cart' outfit.id %}" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="quantity" value="1">
+                        <button type="submit" class="button secondary-button small-button">{% trans "Add to Cart" %}</button>
                     </form>
-                    <a href="{% url 'outfits:outfit-detail' outfit.pk %}" class="button primary-button small-button">Details</a>
+                    <a href="{% url 'outfits:outfit-detail' outfit.pk %}" class="button primary-button small-button">{% trans "Details" %}</a>
                 </div>
             </div>
         </article>
         {% endfor %}
     </div>
-     {% elif query %}
-        <div style="text-align: center; padding: 40px 0;">
-            <p>No outfits found matching your search for "{{ query }}".</p>
-            <p style="margin-top: 15px;"><a href="{% url 'outfits:outfit-list' %}" class="button secondary-button">View All Outfits</a></p>
-        </div>
-     {% endif %}
+
+    {% elif query %}
+    <div style="text-align: center; padding: 40px 0;">
+        <p>{% blocktrans %}No outfits found matching your search for "{{ query }}".{% endblocktrans %}</p>
+        <p style="margin-top: 15px;">
+            <a href="{% url 'outfits:outfit-list' %}" class="button secondary-button">{% trans "View All Outfits" %}</a>
+        </p>
+    </div>
+    {% endif %}
 
     {% if is_paginated %}
-        <div class="pagination">
-             <span class="step-links">
-                {% if page_obj.has_previous %}
-                    <a href="?page=1{% if query %}&q={{ query }}{% endif %}">&laquo; First</a>
-                    <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">Previous</a>
-                {% endif %}
+    <div class="pagination">
+        <span class="step-links">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if query %}&q={{ query }}{% endif %}">&laquo; {% trans "First" %}</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">{% trans "Previous" %}</a>
+            {% endif %}
 
-                <span class="current-page">
-                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
-                </span>
-
-                {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">Next</a>
-                    <a href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}">Last &raquo;</a>
-                {% endif %}
+            <span class="current-page">
+                {% blocktrans %}Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}{% endblocktrans %}
             </span>
-        </div>
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">{% trans "Next" %}</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}">{% trans "Last" %} &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
     {% endif %}
 </section>
 {% endblock %}

@@ -775,3 +775,14 @@ input[type="file"]::file-selector-button:hover { background-color: var(--seconda
   margin-bottom: 7px; color: var(--text-light-color); font-size: 0.95rem;
 }
 .profile-readonly strong { color: var(--text-color); font-weight: 600; }
+
+.sustainable-badge {
+  font-size: 0.75em;
+  background-color: #eaf8ea;
+  color: #388e3c;
+  padding: 4px 8px;
+  border-radius: 8px;
+  margin-left: 8px;
+}
+
+

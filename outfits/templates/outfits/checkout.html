@@ -1,7 +1,9 @@
 {% extends 'outfits/base.html' %}
+{% load static %}
 {% load humanize %}
+{% load i18n %}
 
-{% block title %}Checkout - Confirm Rental Information{% endblock %}
+{% block title %}{% trans "Checkout - Confirm Rental Information" %}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -16,7 +18,7 @@
 
 {% block content %}
 <div class="checkout-container" style="max-width: 1100px; margin: 20px auto; padding: 0 15px;">
-  <h1 style="text-align: center; margin-bottom: 30px;">Confirm Rental Information</h1>
+  <h1 style="text-align: center; margin-bottom: 30px;">{% trans "Confirm Rental Information" %}</h1>
 
   {% if form.non_field_errors %}
     <div class="alert alert-danger">
@@ -28,7 +30,7 @@
 
   <div class="checkout-grid">
     <div class="form-section">
-      <h2 style="margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; font-size: 1.5rem;">📋 Contact & Rental Dates</h2>
+      <h2 style="margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; font-size: 1.5rem;">📋 {% trans "Contact & Rental Dates" %}</h2>
       <form method="post" class="checkout-form">
         {% csrf_token %}
 
@@ -55,35 +57,35 @@
         {% endfor %}
 
         <button type="submit" class="button primary-button" style="width: 100%; padding: 12px; font-size: 1.1em; margin-top: 20px;">
-          ✅ Confirm and Proceed
+          ✅ {% trans "Confirm and Proceed" %}
         </button>
       </form>
     </div>
 
     <div class="summary-section">
-      <h3>Order Summary</h3>
+      <h3>{% trans "Order Summary" %}</h3>
       <div class="summary-items">
           {% for item in cart_items %}
               <div class="summary-item">
                   <span>{{ item.quantity }}x {{ item.outfit.name }}</span>
-                  <span class="text-monospace">{{ item.price_per_day|floatformat:2|intcomma }} / day</span>
+                  <span class="text-monospace">{{ item.price_per_day|floatformat:2|intcomma }} / {% trans "day" %}</span>
               </div>
           {% endfor %}
           <div class="summary-item" style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
-              <span>Subtotal (Per Day)</span>
+              <span>{% trans "Subtotal (Per Day)" %}</span>
               <span class="text-monospace">฿{{ cart_subtotal_per_day|floatformat:2|intcomma }}</span>
           </div>
           <div class="summary-item">
-              <span>Shipping</span>
-              <span class="text-monospace">Free</span>
+              <span>{% trans "Shipping" %}</span>
+              <span class="text-monospace">{% trans "Free" %}</span>
           </div>
       </div>
       <div class="summary-total">
-          <span>Estimated Total</span>
-          <span class="text-muted">(Calculated after rental duration)</span>
+          <span>{% trans "Estimated Total" %}</span>
+          <span class="text-muted">({% trans "Calculated after rental duration" %})</span>
       </div>
       <p style="font-size: 0.8em; color: var(--text-light-color); margin-top: 15px;">
-        The final total will be shown after rental duration is calculated on the next page.
+        {% trans "The final total will be shown after rental duration is calculated on the next page." %}
       </p>
     </div>
   </div>
@@ -109,7 +111,7 @@
                   if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate >= startDate) {
                       const diffTime = endDate - startDate;
                       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                      durationDisplay.textContent = `(${diffDays} day${diffDays > 1 ? 's' : ''})`;
+                      durationDisplay.textContent = `(${diffDays} ${diffDays > 1 ? 'days' : 'day'})`;
                   } else {
                       durationDisplay.textContent = '';
                   }

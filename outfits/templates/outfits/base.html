@@ -1,9 +1,11 @@
 {% load static %}
 {% load humanize %}
+{% load i18n %}
 {% load socialaccount %}
+{% get_current_language as LANGUAGE_CODE %}
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,7 +19,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 
   <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
   {% block extra_head %}{% endblock %}
 </head>
@@ -27,37 +29,63 @@
   <header class="site-header">
     <div class="container header-inner">
       <a href="{% url 'outfits:home' %}" class="logo">MindVibe</a>
+
       <nav class="main-nav">
         <a href="{% url 'outfits:home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
-          <i class="fa-solid fa-house nav-icon"></i> Home
+          <i class="fa-solid fa-house nav-icon"></i> {% trans "Home" %}
         </a>
-        <a href="{% url 'outfits:outfit-list' %}" class="nav-link {% if request.resolver_match.url_name in 'outfit-list outfits-by-category' %}active{% endif %}">
-          <i class="fa-solid fa-shirt nav-icon"></i> All Outfits
+
+        <a href="{% url 'outfits:outfit-list' %}" class="nav-link {% if request.resolver_match.url_name == 'outfit-list' or request.resolver_match.url_name == 'outfits-by-category' %}active{% endif %}">
+          <i class="fa-solid fa-shirt nav-icon"></i> {% trans "All Outfits" %}
         </a>
-        <a href="{% url 'outfits:cart_detail' %}" class="nav-link cart-link {% if request.resolver_match.url_name == 'cart_detail' %}active{% endif %}" title="Cart">
+
+        <a href="{% url 'outfits:cart_detail' %}" class="nav-link cart-link {% if request.resolver_match.url_name == 'cart_detail' %}active{% endif %}" title="{% trans 'Cart' %}">
           <i class="fa-solid fa-basket-shopping nav-icon"></i>
           {% if cart_item_count|default:0 > 0 %}
             <span class="cart-badge">{{ cart_item_count }}</span>
           {% endif %}
         </a>
+
         {% if user.is_authenticated %}
           <a href="{% url 'outfits:order_history' %}" class="nav-link {% if request.resolver_match.url_name == 'order_history' %}active{% endif %}">
-            <i class="fa-solid fa-receipt nav-icon"></i> Orders
+            <i class="fa-solid fa-receipt nav-icon"></i> {% trans "Orders" %}
           </a>
+
           <a href="{% url 'outfits:user_profile' %}" class="nav-link {% if request.resolver_match.url_name == 'user_profile' %}active{% endif %}">
             <i class="fa-solid fa-user nav-icon"></i>
             <span class="user-nav-name">{{ user.first_name|default:user.username }}</span>
           </a>
+
           <form action="{% url 'account_logout' %}" method="post" class="logout-form">
             {% csrf_token %}
-            <button type="submit" class="button link-button">Logout</button>
+            <button type="submit" class="button link-button">{% trans "Logout" %}</button>
           </form>
         {% else %}
           <a href="{% url 'account_login' %}" class="nav-link auth-link">
-            <i class="fa-solid fa-right-to-bracket nav-icon"></i> Login
+            <i class="fa-solid fa-right-to-bracket nav-icon"></i> {% trans "Login" %}
           </a>
         {% endif %}
+
+        <!-- 🌿 About Us -->
+        <a href="{% url 'outfits:about' %}" class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}">
+          <i class="fa-solid fa-leaf nav-icon"></i> {% trans "About Us" %}
+        </a>
+
+        <!-- 🌐 Language Toggle -->
+        <form action="{% url 'set_language' %}" method="post" class="language-toggle-form">
+          {% csrf_token %}
+          <input name="next" type="hidden" value="{{ request.path }}">
+          <select name="language" onchange="this.form.submit()">
+            <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option>
+            <option value="th" {% if LANGUAGE_CODE == 'th' %}selected{% endif %}>ภาษาไทย</option>
+          </select>
+        </form>
       </nav>
+    </div>
+
+    <!-- Tagline -->
+    <div class="sustainability-tagline" style="text-align: center; font-size: 0.85rem; padding: 6px 12px; background-color: #f3f3f3; color: #666;">
+      {% trans "Rent pre-loved outfits 🌿 Help reduce waste. Say no to fast fashion." %}
     </div>
   </header>
 
@@ -78,7 +106,10 @@
   <!-- Footer -->
   <footer class="site-footer">
     <div class="container">
-      <p>&copy; {% now "Y" %} MindVibe. All rights reserved.</p>
+      <p>&copy; {% now "Y" %} MindVibe. {% trans "All rights reserved." %}</p>
+      <p style="font-size: 0.85em; color: #888; margin-top: 4px;">
+        {% trans "Together we slow down fast fashion ♻️" %}
+      </p>
     </div>
   </footer>
 

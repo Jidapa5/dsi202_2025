@@ -1,38 +1,38 @@
-version: '3.9' 
+version: '3.9'
+
 services:
   db:
     image: postgres:15-alpine
+    restart: always
+    ports:
+      - "5433:5432"  # ใช้ 5433 บนเครื่องเรา → 5432 ใน container
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-mindvibe_db}
       POSTGRES_USER: ${POSTGRES_USER:-mindvibe_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_strong_password}
-    ports:
-      - "5433:5432" 
-    restart: always
 
   web:
     build: .
-    env_file:
-      - .env                  # ✅ โหลด environment variables จาก .env
-    volumes:
-      - .:/app                # Mount โค้ดปัจจุบันเข้าไปใน /app ของ container
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
+    command: gunicorn mindvibe_project.wsgi:application --bind 0.0.0.0:8000
     ports:
       - "8000:8000"
+    restart: always
+    env_file:
+      - .env
     environment:
       SECRET_KEY: ${SECRET_KEY:-your_default_django_secret_key}
-      DEBUG: ${DEBUG:-0} # ควรเป็น 0 สำหรับ production
+      DEBUG: ${DEBUG:-0}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
       DATABASE_URL: ${DATABASE_URL:-postgres://mindvibe_user:your_strong_password@db:5432/mindvibe_db}
-      PROMPTPAY_ID: "" 
-
+      PROMPTPAY_ID: "${PROMPTPAY_ID:-0954472922}"  # ✅ ใส่เครื่องหมายคำพูดรอบ string
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
     depends_on:
       - db
-    command: gunicorn mindvibe_project.wsgi:application --bind 0.0.0.0:8000
-    restart: always
 
 volumes:
   postgres_data:

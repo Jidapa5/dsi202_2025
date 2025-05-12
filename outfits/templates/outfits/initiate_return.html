@@ -1,23 +1,26 @@
 {% extends 'outfits/base.html' %}
 {% load static %}
 {% load humanize %}
+{% load i18n %}
 
-{% block title %}Initiate Return - Order #{{ order.id }}{% endblock %}
+{% block title %}{% trans "Initiate Return" %} - Order #{{ order.id }}{% endblock %}
 
 {% block content %}
 <div class="return-container">
-    <h2 style="text-align: center; margin-bottom: 25px;">Initiate Item Return</h2>
-    <p style="text-align: center; margin-bottom: 20px;">For Rental Order: <strong>#{{ order.id }}</strong></p>
+    <h2 style="text-align: center; margin-bottom: 25px;">{% trans "Initiate Item Return" %}</h2>
+    <p style="text-align: center; margin-bottom: 20px;">{% blocktrans %}For Rental Order: <strong>#{{ order.id }}</strong>{% endblocktrans %}</p>
 
     {% if messages %}
-       <div class="messages-container" style="padding-bottom: 15px;">
-            {% for message in messages %} <div class="alert alert-{{ message.tags }}">{{ message }}</div> {% endfor %}
-        </div>
+    <div class="messages-container" style="padding-bottom: 15px;">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
     {% endif %}
 
     <div class="order-summary-brief" style="margin-bottom: 25px; padding: 15px; background-color:#F9FAFB; border-radius: var(--border-radius); border: 1px solid var(--border-color);">
-        <p style="font-size: 0.95em;"><strong>Rental Period:</strong> {{ order.rental_start_date|date:"d M Y" }} to {{ order.rental_end_date|date:"d M Y" }}</p>
-        <p style="font-size: 0.95em;"><strong>Items:</strong>
+        <p style="font-size: 0.95em;"><strong>{% trans "Rental Period:" %}</strong> {{ order.rental_start_date|date:"d M Y" }} {% trans "to" %} {{ order.rental_end_date|date:"d M Y" }}</p>
+        <p style="font-size: 0.95em;"><strong>{% trans "Items:" %}</strong>
             {% for item in order.items.all %}
                 {{ item.quantity }}x {{ item.outfit.name }}{% if not forloop.last %}, {% endif %}
             {% empty %}
@@ -27,25 +30,38 @@
     </div>
 
     <form method="post" enctype="multipart/form-data" class="return-form">
-         <h3>Enter Return Details</h3>
+        <h3>{% trans "Enter Return Details" %}</h3>
         {% csrf_token %}
         {% for field in form %}
             <div class="form-field">
                 {{ field.label_tag }}
                 {{ field }}
-                {% if field.errors %}<div class="form-errors"> {% for error in field.errors %}<span>{{ error }}</span>{% endfor %} </div>{% endif %}
-                {% if field.help_text %}<p class="help-text">{{ field.help_text|safe }}</p>{% endif %}
+                {% if field.errors %}
+                    <div class="form-errors">
+                        {% for error in field.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if field.help_text %}
+                    <p class="help-text">{{ field.help_text|safe }}</p>
+                {% endif %}
             </div>
         {% endfor %}
 
-         {% if form.non_field_errors %} <div class="form-errors">{{ form.non_field_errors }}</div> {% endif %}
+        {% if form.non_field_errors %}
+            <div class="form-errors">{{ form.non_field_errors }}</div>
+        {% endif %}
 
-        <button type="submit" class="button primary-button" style="width: 100%; padding: 12px; margin-top: 15px;">Confirm Return Submission</button>
+        <button type="submit" class="button primary-button" style="width: 100%; padding: 12px; margin-top: 15px;">
+            {% trans "Confirm Return Submission" %}
+        </button>
     </form>
 
     <p style="text-align: center; margin-top: 15px;">
-         <a href="{% url 'outfits:order_detail' order.id %}" class="link-button" style="color: var(--text-light-color); font-size: 0.9em; text-decoration: none;">Cancel and return to order details</a>
-     </p>
-
+        <a href="{% url 'outfits:order_detail' order.id %}" class="link-button" style="color: var(--text-light-color); font-size: 0.9em; text-decoration: none;">
+            {% trans "Cancel and return to order details" %}
+        </a>
+    </p>
 </div>
 {% endblock %}

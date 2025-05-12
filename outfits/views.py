@@ -18,8 +18,7 @@ from django.db import transaction
 from django.contrib.auth import login, get_user_model
 from django.utils import timezone
 
-# Import the QR generation utility (moved into function to handle potential startup ImportError)
-# from .utils.qr import generate_promptpay_qr
+from outfits.models import Order
 
 from .models import Outfit, Category, Order, OrderItem, UserProfile
 from .forms import (
@@ -564,3 +563,23 @@ def initiate_return_view(request, order_id):
 
     context = { 'order': order, 'form': form, }
     return render(request, 'outfits/initiate_return.html', context)
+
+def about_us_view(request):
+    return render(request, 'outfits/about_us.html')
+
+
+def about_us_view(request):
+    outfits_rented = Order.objects.filter(status__in=['completed', 'return_received']).count()
+
+    # คำนวณตามสมมติฐาน 1 เช่า ≈ 0.8 ชุดที่ไม่ต้องผลิตใหม่
+    new_clothes_saved = round(outfits_rented * 0.8, 2)
+
+    # อิง: Ellen MacArthur Foundation – 1 ตัน ≈ 200 ชุด
+    textile_waste_avoided = round(outfits_rented / 200, 2)
+
+    context = {
+        'outfits_rented': outfits_rented,
+        'new_clothes_saved': new_clothes_saved,
+        'textile_waste_avoided': textile_waste_avoided,
+    }
+    return render(request, 'outfits/about_us.html', context)

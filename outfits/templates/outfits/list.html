@@ -1,23 +1,28 @@
 {% extends 'outfits/base.html' %}
 {% load static %}
 {% load humanize %}
+{% load i18n %}
 
-{% block title %}{{ title|default:"Outfits" }}{% endblock %}
+{% block title %}{{ title|default:_("Outfits") }}{% endblock %}
 
 {% block content %}
 <section class="outfit-list-section">
     <header style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-        <h2>{{ title|default:"All Outfits" }}</h2>
+        <h2>{{ title|default:_("All Outfits") }}</h2>
 
         <form method="get" action="{% url 'outfits:outfit-search' %}" class="search-form" style="display: flex;">
-            <input type="text" name="q" placeholder="Search outfits..." value="{{ query|default:'' }}" style="min-width: 200px; border-radius: var(--border-radius) 0 0 var(--border-radius);">
-            <button type="submit" class="button primary-button" style="border-radius: 0 var(--border-radius) var(--border-radius) 0;">Search</button>
+            <input type="text" name="q" placeholder="{% trans 'Search outfits...' %}" value="{{ query|default:'' }}" style="min-width: 200px; border-radius: var(--border-radius) 0 0 var(--border-radius);">
+            <button type="submit" class="button primary-button" style="border-radius: 0 var(--border-radius) var(--border-radius) 0;">{% trans "Search" %}</button>
         </form>
     </header>
 
     {% if category %}
-        <h3 style="margin-bottom: 20px; font-weight: 500;">Category: {{ category.name }}</h3>
+        <h3 style="margin-bottom: 10px; font-weight: 500;">{% blocktrans %}Category: {{ category.name }}{% endblocktrans %}</h3>
     {% endif %}
+
+    <p class="category-description" style="font-size: 0.85em; color: var(--text-light-color); margin-bottom: 25px;">
+        {% trans "Discover pre-loved fashion that supports a greener world. Every rented outfit helps reduce textile waste and fast fashion impact. 🌱" %}
+    </p>
 
     <div class="outfit-grid">
         {% for outfit in outfits %}
@@ -28,39 +33,44 @@
                         <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}">
                     </a>
                 {% else %}
-                     <div class="outfit-card-no-image">(No Image)</div>
+                    <div class="outfit-card-no-image">{% trans "(No Image)" %}</div>
                 {% endif %}
             </div>
             <div class="outfit-card-body">
-                <h3 class="outfit-card-title"><a href="{% url 'outfits:outfit-detail' outfit.pk %}">{{ outfit.name }}</a></h3>
+                <h3 class="outfit-card-title">
+                    <a href="{% url 'outfits:outfit-detail' outfit.pk %}">{{ outfit.name }}</a>
+                    <span class="sustainable-badge">♻️ {% trans "Pre-loved" %}</span>
+                </h3>
                 {% if outfit.category %}
-                 <p class="outfit-card-category">
-                    <a href="{% url 'outfits:outfits-by-category' outfit.category.slug %}">{{ outfit.category.name }}</a>
-                 </p>
+                    <p class="outfit-card-category">
+                        <a href="{% url 'outfits:outfits-by-category' outfit.category.slug %}">{{ outfit.category.name }}</a>
+                    </p>
                 {% endif %}
                 <p class="description" style="font-size: 0.9em; color: var(--text-light-color); margin-bottom: 10px;">{{ outfit.description|truncatechars:70 }}</p>
-                <p class="outfit-card-price">{{ outfit.price|floatformat:2|intcomma }} / day</p>
+                <p class="outfit-card-price">{{ outfit.price|floatformat:2|intcomma }} / {% trans "day" %}</p>
                 <div class="outfit-actions">
                     <form action="{% url 'outfits:add_to_cart' outfit.id %}" method="post">
-                         {% csrf_token %}
-                         <input type="hidden" name="quantity" value="1">
-                         <button type="submit" class="button secondary-button small-button">Add to Cart</button>
+                        {% csrf_token %}
+                        <input type="hidden" name="quantity" value="1">
+                        <button type="submit" class="button secondary-button small-button">{% trans "Add to Cart" %}</button>
                     </form>
-                    <a href="{% url 'outfits:outfit-detail' outfit.pk %}" class="button primary-button small-button">Details</a>
+                    <a href="{% url 'outfits:outfit-detail' outfit.pk %}" class="button primary-button small-button">{% trans "Details" %}</a>
                 </div>
             </div>
         </article>
         {% empty %}
-            <div style="grid-column: 1 / -1; text-align: center; padding: 40px 0;">
-                {% if query %}
-                     <p>No outfits found matching your search for "{{ query }}".</p>
-                {% elif category %}
-                     <p>No outfits found in the "{{ category.name }}" category yet.</p>
-                {% else %}
-                     <p>No outfits available at the moment.</p>
-                {% endif %}
-                 <p style="margin-top: 15px;"><a href="{% url 'outfits:outfit-list' %}" class="button secondary-button">View All Outfits</a></p>
-            </div>
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px 0;">
+            {% if query %}
+                {% blocktrans %}No outfits found matching your search for "{{ query }}".{% endblocktrans %}
+            {% elif category %}
+                {% blocktrans %}No outfits found in the "{{ category.name }}" category yet.{% endblocktrans %}
+            {% else %}
+                {% trans "No outfits available at the moment." %}
+            {% endif %}
+            <p style="margin-top: 15px;">
+                <a href="{% url 'outfits:outfit-list' %}" class="button secondary-button">{% trans "View All Outfits" %}</a>
+            </p>
+        </div>
         {% endfor %}
     </div>
 
@@ -68,21 +78,20 @@
         <div class="pagination">
             <span class="step-links">
                 {% if page_obj.has_previous %}
-                    <a href="?page=1{% if query %}&q={{ query }}{% endif %}">&laquo; First</a>
-                    <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">Previous</a>
+                    <a href="?page=1{% if query %}&q={{ query }}{% endif %}">&laquo; {% trans "First" %}</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">{% trans "Previous" %}</a>
                 {% endif %}
 
                 <span class="current-page">
-                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                    {% blocktrans %}Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.{% endblocktrans %}
                 </span>
 
                 {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">Next</a>
-                    <a href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}">Last &raquo;</a>
+                    <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">{% trans "Next" %}</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}">{% trans "Last" %} &raquo;</a>
                 {% endif %}
             </span>
         </div>
     {% endif %}
-
 </section>
 {% endblock %}

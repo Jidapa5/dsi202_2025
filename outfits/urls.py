@@ -34,4 +34,7 @@ urlpatterns = [
     # --- *** เพิ่ม URL สำหรับหน้าแจ้งส่งคืน *** ---
     path('orders/<int:order_id>/return/', views.initiate_return_view, name='initiate_return'),
 
+    path('about/', views.about_us_view, name='about'),
+
+
 ]

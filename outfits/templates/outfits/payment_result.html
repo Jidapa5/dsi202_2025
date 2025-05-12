@@ -1,12 +1,14 @@
 {% extends 'outfits/base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Payment Result - MindVibe{% endblock %}
+{% block title %}{% trans "Payment Result" %} - MindVibe{% endblock %}
 
 {% block content %}
 <div class="detail-card" style="max-width: 600px; margin: 40px auto; text-align: center;">
-
-  <h2 style="color: var(--primary-color); margin-bottom: 20px;">Payment Status</h2>
+  <h2 style="color: var(--primary-color); margin-bottom: 20px;">
+    {% trans "Payment Status" %}
+  </h2>
 
   {% if messages %}
     {% for message in messages %}
@@ -15,19 +17,27 @@
       </div>
     {% endfor %}
   {% else %}
-      <p>Thank you for using MindVibe!</p>
+    <div style="font-size: 1.1rem; color: var(--success-color); margin-bottom: 15px;">
+      ✅ {% trans "Thank you for your payment and using MindVibe!" %}
+    </div>
   {% endif %}
 
-   {% if order %}
-       <p style="margin-top: 15px;">Order ID: #{{ order.id }}</p>
-   {% endif %}
+  {% if order %}
+    <p style="margin-top: 15px; font-weight: 500;">
+      {% blocktrans with order_id=order.id %}Order ID: #{{ order_id }}{% endblocktrans %}
+    </p>
+    <p style="margin-top: 10px; font-size: 0.95rem; color: #777;">
+      {% trans "Status:" %} 
+      <strong class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</strong>
+    </p>
+  {% endif %}
 
   <div style="margin-top: 30px; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
     <a href="{% url 'outfits:order_history' %}" class="button secondary-button">
-      View Order History
+      {% trans "View Order History" %}
     </a>
     <a href="{% url 'outfits:outfit-list' %}" class="button primary-button">
-      Continue Shopping
+      {% trans "Continue Shopping" %}
     </a>
   </div>
 </div>

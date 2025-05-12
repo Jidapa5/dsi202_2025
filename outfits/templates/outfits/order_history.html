@@ -1,37 +1,38 @@
 {% extends 'outfits/base.html' %}
 {% load humanize %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Order History - MindVibe{% endblock %}
+{% block title %}{% trans "Order History" %} - MindVibe{% endblock %}
 
 {% block content %}
-  <h2 style="text-align:center; margin-bottom: 30px;">Your Order History</h2>
+  <h2 style="text-align:center; margin-bottom: 30px;">{% trans "Your Order History" %}</h2>
 
   {% if orders %}
     <div class="table-container">
         <table class="data-table order-history-table">
           <thead>
             <tr>
-              <th>Order ID</th>
-              <th>Date Placed</th>
-              <th>Rental Start</th>
-              <th>Rental End</th>
-              <th class="text-right">Total Amount</th>
-              <th class="text-center">Status</th>
-              <th class="text-center">Details</th>
+              <th>{% trans "Order ID" %}</th>
+              <th>{% trans "Date Placed" %}</th>
+              <th>{% trans "Rental Start" %}</th>
+              <th>{% trans "Rental End" %}</th>
+              <th class="text-right">{% trans "Total Amount" %}</th>
+              <th class="text-center">{% trans "Status" %}</th>
+              <th class="text-center">{% trans "Details" %}</th>
             </tr>
           </thead>
           <tbody>
             {% for order in orders %}
               <tr>
-                <td data-label="Order ID">#{{ order.id }}</td>
-                <td data-label="Date Placed">{{ order.created_at|date:"d M Y, H:i" }}</td>
-                <td data-label="Rental Start">{{ order.rental_start_date|date:"d M Y" }}</td>
-                <td data-label="Rental End">{{ order.rental_end_date|date:"d M Y" }}</td>
-                <td data-label="Total Amount" class="text-right text-monospace">{{ order.total_amount|floatformat:2|intcomma }}</td>
-                <td data-label="Status" class="text-center"><span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span></td>
-                <td data-label="Details" class="text-center">
-                  <a href="{% url 'outfits:order_detail' order.id %}" class="button secondary-button tiny-button">View Details</a>
+                <td data-label="{% trans 'Order ID' %}">#{{ order.id }}</td>
+                <td data-label="{% trans 'Date Placed' %}">{{ order.created_at|date:"d M Y, H:i" }}</td>
+                <td data-label="{% trans 'Rental Start' %}">{{ order.rental_start_date|date:"d M Y" }}</td>
+                <td data-label="{% trans 'Rental End' %}">{{ order.rental_end_date|date:"d M Y" }}</td>
+                <td data-label="{% trans 'Total Amount' %}" class="text-right text-monospace">{{ order.total_amount|floatformat:2|intcomma }}</td>
+                <td data-label="{% trans 'Status' %}" class="text-center"><span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span></td>
+                <td data-label="{% trans 'Details' %}" class="text-center">
+                  <a href="{% url 'outfits:order_detail' order.id %}" class="button secondary-button tiny-button">{% trans "View Details" %}</a>
                 </td>
               </tr>
             {% endfor %}
@@ -40,8 +41,8 @@
     </div>
   {% else %}
     <div style="text-align: center; padding: 40px 0;">
-        <p style="margin-bottom: 20px; color: var(--text-light-color);">You haven't placed any orders yet.</p>
-        <a href="{% url 'outfits:outfit-list' %}" class="button primary-button">Browse Outfits</a>
+        <p style="margin-bottom: 20px; color: var(--text-light-color);">{% trans "You haven't placed any orders yet." %}</p>
+        <a href="{% url 'outfits:outfit-list' %}" class="button primary-button">{% trans "Browse Outfits" %}</a>
     </div>
   {% endif %}
 

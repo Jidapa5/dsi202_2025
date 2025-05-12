@@ -1,6 +1,7 @@
 {% extends 'outfits/base.html' %}
 {% load humanize %}
 {% load static %}
+{% load i18n %}
 
 {% block title %}{{ outfit.name }} - MindVibe{% endblock %}
 
@@ -10,60 +11,64 @@
         {% if outfit.image %}
             <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}">
         {% else %}
-            <div class="outfit-card-no-image" style="height: 400px;">(No Image Available)</div>
+            <div class="outfit-card-no-image" style="height: 400px;">{% trans "(No Image Available)" %}</div>
         {% endif %}
     </div>
     <div class="outfit-details">
-        <h2>{{ outfit.name }}</h2>
+        <h2>
+            {{ outfit.name }}
+            <span class="sustainable-badge">♻️ {% trans "Pre-loved" %}</span>
+        </h2>
         {% if outfit.category %}
             <p class="outfit-card-category" style="margin-bottom: 15px;">
-                Category: <a href="{% url 'outfits:outfits-by-category' outfit.category.slug %}">{{ outfit.category.name }}</a>
+                {% trans "Category:" %} <a href="{% url 'outfits:outfits-by-category' outfit.category.slug %}">{{ outfit.category.name }}</a>
             </p>
         {% endif %}
 
         <p class="description">{{ outfit.description }}</p>
         <p class="price">
-            Rental Price: <span class="price-value">{{ outfit.price|floatformat:2|intcomma }}</span> / day
+            {% trans "Rental Price:" %} <span class="price-value">{{ outfit.price|floatformat:2|intcomma }}</span> / {% trans "day" %}
         </p>
 
-        {# Reverted: Display current status for today only #}
+        <p style="font-size: 0.85em; color: var(--text-light-color); margin-bottom: 20px;">
+            {% trans "Every rental helps reduce waste and gives this outfit a second life 🌱" %}
+        </p>
+
         {% if current_status_text %}
-        <p style="margin-bottom: 20px; font-weight: 500;">Current Status (Today):
+        <p style="margin-bottom: 20px; font-weight: 500;">{% trans "Current Status (Today):" %}
            <span class="{% if current_status_text == 'Available' %}green-text{% else %}red-text{% endif %}">
             {{ current_status_text }}
            </span>
-
         </p>
         {% endif %}
 
         <div class="add-to-cart-action">
              {% if outfit.is_active %}
                 {% if outfit.id|stringformat:"s" in cart_outfit_ids %}
-                     <p style="color: var(--success-border); font-weight: 600;">✅ This item is already in your cart.</p>
-                     <a href="{% url 'outfits:cart_detail' %}" class="button secondary-button small-button" style="margin-top:10px;">Go to Cart</a>
+                     <p style="color: var(--success-border); font-weight: 600;">✅ {% trans "This item is already in your cart." %}</p>
+                     <a href="{% url 'outfits:cart_detail' %}" class="button secondary-button small-button" style="margin-top:10px;">{% trans "Go to Cart" %}</a>
                 {% else %}
                     {% if current_status_text == 'Available' %}
                         <form action="{% url 'outfits:add_to_cart' outfit.id %}" method="post">
                             {% csrf_token %}
                             <input type="hidden" name="quantity" value="1">
-                            <button type="submit" class="button primary-button add-cart-button">Add to Cart</button>
+                            <button type="submit" class="button primary-button add-cart-button">{% trans "Add to Cart" %}</button>
                         </form>
                     {% else %}
-                         <button type="button" class="button primary-button" disabled>Add to Cart</button>
-                         <p class="help-text" style="margin-top: 5px;">(Item may be unavailable for today or currently rented)</p>
+                         <button type="button" class="button primary-button" disabled>{% trans "Add to Cart" %}</button>
+                         <p class="help-text" style="margin-top: 5px;">{% trans "(Item may be unavailable for today or currently rented)" %}</p>
                     {% endif %}
                 {% endif %}
              {% else %}
-                 <p style="color: var(--error-border);">(This outfit is currently inactive)</p>
+                 <p style="color: var(--error-border);">{% trans "(This outfit is currently inactive)" %}</p>
              {% endif %}
         </div>
-
     </div>
 </article>
 
 {% if related_outfits %}
     <section class="related-outfits" style="margin-top: 50px; padding-top: 30px; border-top: 1px solid var(--border-color);">
-        <h3>Related Outfits</h3>
+        <h3>{% trans "Related Outfits" %}</h3>
         <div class="outfit-grid">
             {% for related_outfit in related_outfits %}
                 <article class="outfit-card">
@@ -72,15 +77,18 @@
                         {% if related_outfit.image %}
                             <img src="{{ related_outfit.image.url }}" alt="{{ related_outfit.name }}">
                         {% else %}
-                            <div class="outfit-card-no-image" style="height: 200px;">(No Image)</div>
+                            <div class="outfit-card-no-image" style="height: 200px;">{% trans "(No Image)" %}</div>
                         {% endif %}
                         </a>
                     </div>
                     <div class="outfit-card-body">
-                        <h4 class="outfit-card-title"><a href="{% url 'outfits:outfit-detail' related_outfit.pk %}">{{ related_outfit.name }}</a></h4>
-                        <p class="outfit-card-price">{{ related_outfit.price|floatformat:2|intcomma }} / day</p>
+                        <h4 class="outfit-card-title">
+                            <a href="{% url 'outfits:outfit-detail' related_outfit.pk %}">{{ related_outfit.name }}</a>
+                            <span class="sustainable-badge">♻️</span>
+                        </h4>
+                        <p class="outfit-card-price">{{ related_outfit.price|floatformat:2|intcomma }} / {% trans "day" %}</p>
                         <div class="outfit-actions" style="margin-top: 10px;">
-                             <a href="{% url 'outfits:outfit-detail' related_outfit.pk %}" class="button primary-button small-button">View</a>
+                             <a href="{% url 'outfits:outfit-detail' related_outfit.pk %}" class="button primary-button small-button">{% trans "View" %}</a>
                          </div>
                     </div>
                 </article>
@@ -88,7 +96,4 @@
         </div>
     </section>
 {% endif %}
-
-{# Removed the booked_periods_json script tag #}
-
 {% endblock %}

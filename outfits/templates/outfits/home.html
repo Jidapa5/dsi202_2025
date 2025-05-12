@@ -1,75 +1,74 @@
 {% extends 'outfits/base.html' %}
 {% load static %}
 {% load humanize %}
+{% load i18n %}
 
-{% block title %}Home - MindVibe{% endblock %}
+{% block title %}{% trans "Home" %} - MindVibe{% endblock %}
 
 {% block content %}
-
 <section class="hero sustainable-hero">
-    <div class="hero-content">
-        <h1>Style with Purpose.</h1>
-        <p class="tagline">
-            Rent Smarter. Live Greener. Earth-loving fashion, for you.
-        </p>
-        <a href="{% url 'outfits:outfit-list' %}" class="button hero-cta-button">Discover Collection</a>
-    </div>
+  <div class="hero-content">
+    <h1>{% trans "Style with Purpose." %}</h1>
+    <p class="tagline">
+      {% trans "Wear second-hand. Love the planet. Join the movement against fast fashion." %}
+    </p>
+    <a href="{% url 'outfits:outfit-list' %}" class="button hero-cta-button">{% trans "Discover Collection" %}</a>
+  </div>
 </section>
 
-{% comment %} === Categories Section === {% endcomment %}
 {% if categories %}
 <section class="categories-section">
-    <h2>Categories</h2>
-    <div class="categories-grid">
-        {% for category in categories %}
-        <a href="{% url 'outfits:outfits-by-category' category.slug %}" class="category-card">
-            <span class="category-card-name">{{ category.name }}</span>
-        </a>
-        {% endfor %}
-    </div>
+  <h2>{% trans "Categories" %}</h2>
+  <div class="categories-grid">
+    {% for category in categories %}
+      <a href="{% url 'outfits:outfits-by-category' category.slug %}" class="category-card">
+        <span class="category-card-name">{{ category.name }}</span>
+      </a>
+    {% endfor %}
+  </div>
 </section>
 {% endif %}
-{% comment %} === End Categories Section === {% endcomment %}
 
-
-{% comment %} === Featured Outfits === {% endcomment %}
 {% if featured_outfits %}
-    <section class="featured-outfits">
-        <h2> Featured Outfits </h2>
-        <div class="outfit-grid">
-            {% for outfit in featured_outfits %}
-                <article class="outfit-card">
-                    <div class="outfit-image">
-                        <a href="{% url 'outfits:outfit-detail' outfit.pk %}">
-                            {% if outfit.image %}
-                                <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}">
-                            {% else %}
-                                 <div class="outfit-card-no-image">(No Image)</div>
-                            {% endif %}
-                        </a>
-                    </div>
-                    <div class="outfit-card-body">
-                        <h3 class="outfit-card-title"><a href="{% url 'outfits:outfit-detail' outfit.pk %}">{{ outfit.name }}</a></h3>
-                        {% if outfit.category %}
-                            <p class="outfit-card-category">
-                                <a href="{% url 'outfits:outfits-by-category' outfit.category.slug %}">{{ outfit.category.name }}</a>
-                            </p>
-                        {% endif %}
-                        <p class="outfit-card-price">{{ outfit.price|floatformat:2|intcomma }} / day</p>
-                         <div class="outfit-actions">
-                            <form action="{% url 'outfits:add_to_cart' outfit.id %}" method="post">
-                                 {% csrf_token %}
-                                 <input type="hidden" name="quantity" value="1">
-                                 <input type="hidden" name="next" value="{{ request.path }}">
-                                 <button type="submit" class="button secondary-button small-button">Add to Cart</button>
-                            </form>
-                            <a href="{% url 'outfits:outfit-detail' outfit.pk %}" class="button primary-button small-button">Details</a>
-                        </div>
-                    </div>
-                </article>
-            {% endfor %}
+<section class="featured-outfits">
+  <h2>{% trans "Featured Outfits" %}</h2>
+  <div class="outfit-grid">
+    {% for outfit in featured_outfits %}
+      <article class="outfit-card">
+        <div class="outfit-image">
+          <a href="{% url 'outfits:outfit-detail' outfit.pk %}">
+            {% if outfit.image %}
+              <img src="{{ outfit.image.url }}" alt="{{ outfit.name }}">
+            {% else %}
+              <div class="outfit-card-no-image">{% trans "(No Image)" %}</div>
+            {% endif %}
+          </a>
         </div>
-    </section>
-{% endif %}
+        <div class="outfit-card-body">
+          <h3 class="outfit-card-title">
+            <a href="{% url 'outfits:outfit-detail' outfit.pk %}">{{ outfit.name }}</a>
+          </h3>
+          {% if outfit.category %}
+            <p class="outfit-card-category">
+              <a href="{% url 'outfits:outfits-by-category' outfit.category.slug %}">{{ outfit.category.name }}</a>
+            </p>
+          {% endif %}
+          <p class="outfit-card-price">{{ outfit.price|floatformat:2|intcomma }} / {% trans "day" %}</p>
+          <div class="outfit-actions">
+            <form action="{% url 'outfits:add_to_cart' outfit.id %}" method="post">
+              {% csrf_token %}
+              <input type="hidden" name="quantity" value="1">
+              <input type="hidden" name="next" value="{{ request.path }}">
+              <button type="submit" class="button secondary-button small-button">{% trans "Add to Cart" %}</button>
+            </form>
+            <a href="{% url 'outfits:outfit-detail' outfit.pk %}" class="button primary-button small-button">{% trans "Details" %}</a>
+          </div>
+        </div>
+      </article>
+    {% endfor %}
 
+  
+  </div>
+</section>
+{% endif %}
 {% endblock %}

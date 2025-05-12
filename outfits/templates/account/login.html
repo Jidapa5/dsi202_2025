@@ -13,14 +13,14 @@
     <div class="social-login">
       <a href="{% provider_login_url 'google' %}" class="google-login-button">
         <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo" />
-        Sign in with Google
+        {% trans "Sign in with Google" %}
       </a>
     </div>
   {% endif %}
 
   <details style="margin-top: 30px;">
     <summary style="cursor: pointer; font-size: 0.95rem; color: var(--text-light-color); text-align: center;">
-      Sign in with Email (Optional)
+      {% trans "Sign in with Email (Optional)" %}
     </summary>
     <form class="login" method="POST" action="{% url 'account_login' %}" style="margin-top: 20px;">
       {% csrf_token %}
@@ -28,13 +28,13 @@
       {% if redirect_field_value %}
         <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
       {% endif %}
-      <button class="button primary-button" type="submit">Sign In</button>
+      <button class="button primary-button" type="submit">{% trans "Sign In" %}</button>
     </form>
   </details>
 
   <div class="auth-footer-link">
-    <p><a href="{% url 'account_reset_password' %}">Forgot Password?</a></p>
-    <p>Don’t have an account? <a href="{{ signup_url }}">Sign up</a></p>
+    <p><a href="{% url 'account_reset_password' %}">{% trans "Forgot Password?" %}</a></p>
+    <p>{% trans "Don’t have an account?" %} <a href="{{ signup_url }}">{% trans "Sign up" %}</a></p>
   </div>
 </div>
 {% endblock %}
