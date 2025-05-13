@@ -70,11 +70,11 @@ MindVibe ใช้ชุดสีที่ได้รับแรงบัน�
 ### 🚀 ตัวเลือกที่ 1: สำหรับนักพัฒนา (Dev)
 
 ```bash
-git clone https://github.com/your-username/mindvibe.git
-cd mindvibe
+[git clone [https://github.com/Jidapa5/dsi202_2025.git]
+cd dsi202
 python -m venv venv
 source venv/bin/activate  # สำหรับ macOS/Linux
-# venv\Scriptsctivate    # สำหรับ Windows
+# .\venv\Scripts\activate     # สำหรับ Windows
 pip install -r requirements.txt
 cp .env.example .env      # แก้ไขค่าใน .env เช่น SECRET_KEY, DATABASE_URL, PROMPTPAY_ID, Google OAuth, EMAIL_HOST_USER/PASSWORD
 python manage.py migrate
