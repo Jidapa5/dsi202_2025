@@ -1,11 +1,11 @@
-version: '3.9'
+version: ''
 
 services:
   db:
     image: postgres:15-alpine
     restart: always
     ports:
-      - "5433:5432"  # ใช้ 5433 บนเครื่องเรา → 5432 ใน container
+      - "5433:5432"  
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
@@ -26,7 +26,7 @@ services:
       DEBUG: ${DEBUG:-0}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
       DATABASE_URL: ${DATABASE_URL:-postgres://mindvibe_user:your_strong_password@db:5432/mindvibe_db}
-      PROMPTPAY_ID: "${PROMPTPAY_ID:-0954472922}"  # ✅ ใส่เครื่องหมายคำพูดรอบ string
+      PROMPTPAY_ID: "${PROMPTPAY_ID:-0954472922}"  
     volumes:
       - .:/app
       - static_volume:/app/staticfiles
