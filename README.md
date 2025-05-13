@@ -70,7 +70,7 @@ MindVibe ใช้ชุดสีที่ได้รับแรงบัน�
 ### 🚀 ตัวเลือกที่ 1: สำหรับนักพัฒนา (Dev)
 
 ```bash
-[git clone [https://github.com/Jidapa5/dsi202_2025.git]]
+git clone https://github.com/Jidapa5/dsi202_2025.git
 cd dsi202
 python -m venv venv
 source venv/bin/activate  # สำหรับ macOS/Linux
