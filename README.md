@@ -3,6 +3,7 @@
 
 **Style with Purpose. Rent Smarter. Live Greener.**  
 **แฟชั่นที่ยั่งยืน เพื่อโลกที่ดีขึ้น**
+https://youtu.be/-DNupaC5udM?si=K9pbDyhh3WNS-omz
 
 ---
 
